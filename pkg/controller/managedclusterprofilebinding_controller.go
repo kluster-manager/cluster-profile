@@ -25,6 +25,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 // ManagedClusterProfileBindingReconciler reconciles a ManagedClusterProfileBinding object
@@ -47,9 +48,14 @@ type ManagedClusterProfileBindingReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.19.0/pkg/reconcile
 func (r *ManagedClusterProfileBindingReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
+	logger := log.FromContext(ctx)
+	logger.Info("Start reconciling")
 
-	// TODO(user): your logic here
+	profile := &profilev1alpha1.ManagedClusterProfileBinding{}
+	err := r.Client.Get(ctx, req.NamespacedName, profile)
+	if err != nil {
+		return reconcile.Result{}, client.IgnoreNotFound(err)
+	}
 
 	return ctrl.Result{}, nil
 }
