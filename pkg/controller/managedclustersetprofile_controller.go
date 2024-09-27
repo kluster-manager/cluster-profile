@@ -19,7 +19,6 @@ package controller
 import (
 	"context"
 	"fmt"
-	"time"
 
 	profilev1alpha1 "github.com/kluster-manager/cluster-profile/apis/profile/v1alpha1"
 
@@ -100,6 +99,9 @@ func (r *ManagedClusterSetProfileReconciler) Reconcile(ctx context.Context, req 
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      fmt.Sprintf("%s-%s", profile.Name, cluster.Name),
 				Namespace: cluster.Name,
+				OwnerReferences: []metav1.OwnerReference{
+					*metav1.NewControllerRef(profile, profilev1alpha1.SchemeGroupVersion.WithKind(profilev1alpha1.ResourceKindManagedClusterSetProfile)),
+				},
 			},
 			Spec: profilev1alpha1.ManagedClusterProfileBindingSpec{
 				ProfileRef:      core.LocalObjectReference{Name: profile.Name},
@@ -132,13 +134,10 @@ func (r *ManagedClusterSetProfileReconciler) Reconcile(ctx context.Context, req 
 		}
 	}
 
-	return reconcile.Result{
-		Requeue:      true,
-		RequeueAfter: 5 * time.Minute,
-	}, nil
+	return reconcile.Result{}, nil
 }
 
-func (r *ManagedClusterSetProfileReconciler) mapManagedClusterSetToRoleBindings(ctx context.Context, obj client.Object) []reconcile.Request {
+func (r *ManagedClusterSetProfileReconciler) mapManagedClusterSetToProfile(ctx context.Context, obj client.Object) []reconcile.Request {
 	logger := log.FromContext(ctx)
 	managedClusterSet, ok := obj.(*clusterv1beta2.ManagedClusterSet)
 	if !ok {
@@ -174,7 +173,7 @@ func (r *ManagedClusterSetProfileReconciler) SetupWithManager(mgr ctrl.Manager) 
 		For(&profilev1alpha1.ManagedClusterSetProfile{}).
 		Watches(
 			&clusterv1beta2.ManagedClusterSet{},
-			handler.EnqueueRequestsFromMapFunc(r.mapManagedClusterSetToRoleBindings),
+			handler.EnqueueRequestsFromMapFunc(r.mapManagedClusterSetToProfile),
 		).
 		Complete(r)
 }

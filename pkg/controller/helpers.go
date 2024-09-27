@@ -17,23 +17,50 @@ limitations under the License.
 package controller
 
 import (
-	"encoding/json"
+	"errors"
+	"fmt"
 
+	profilev1alpha1 "github.com/kluster-manager/cluster-profile/apis/profile/v1alpha1"
 	"github.com/kluster-manager/cluster-profile/pkg/common"
 
-	"github.com/pkg/errors"
 	kmapi "kmodules.xyz/client-go/api/v1"
 	v1 "open-cluster-management.io/api/cluster/v1"
+	"sigs.k8s.io/yaml"
 )
 
 func getClusterMetadata(cluster v1.ManagedCluster) (kmapi.ClusterInfo, error) {
 	var clusterInfo kmapi.ClusterInfo
+	var clusterMetadata struct {
+		ClusterMetadata kmapi.ClusterInfo `yaml:"clusterMetadata"`
+	}
+
 	for _, claim := range cluster.Status.ClusterClaims {
 		if claim.Name == common.ClusterClaimClusterInfo {
-			err := json.Unmarshal([]byte(claim.Value), &clusterInfo)
-			return clusterInfo, err
+			yamlData := []byte(claim.Value)
+			if err := yaml.Unmarshal(yamlData, &clusterMetadata); err != nil {
+				return clusterInfo, err // Return error if YAML unmarshaling fails
+			}
+			clusterInfo = clusterMetadata.ClusterMetadata
+			return clusterInfo, nil
 		}
 	}
 
 	return clusterInfo, errors.New("cluster info not found")
+}
+
+func isOpscenterFeaturesExistsInProfile(profile *profilev1alpha1.ManagedClusterSetProfile) bool {
+	if _, exists := profile.Spec.Features["opscenter-features"]; exists {
+		return true
+	}
+	return false
+}
+
+func validateFeatureList(profile *profilev1alpha1.ManagedClusterSetProfile) error {
+	requiredFeatures := []string{"opscenter-features", "kube-ui-server"}
+	for _, f := range requiredFeatures {
+		if _, found := profile.Spec.Features[f]; !found {
+			return fmt.Errorf("%s not found in feature list", f)
+		}
+	}
+	return nil
 }

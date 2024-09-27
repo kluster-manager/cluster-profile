@@ -18,4 +18,5 @@ package common
 
 const (
 	ClusterClaimClusterInfo = "cluster.ace.info"
+	LabelAceFeatureSet      = "featureset.appscode.com/managed"
 )

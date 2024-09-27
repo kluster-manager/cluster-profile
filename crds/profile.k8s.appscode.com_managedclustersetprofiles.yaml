@@ -67,6 +67,8 @@ spec:
                       - name
                       - sourceRef
                       type: object
+                    featureSet:
+                      type: string
                     values:
                       x-kubernetes-preserve-unknown-fields: true
                     valuesFrom:

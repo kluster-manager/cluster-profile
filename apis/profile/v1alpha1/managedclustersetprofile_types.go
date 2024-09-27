@@ -35,6 +35,8 @@ type ManagedClusterSetProfileSpec struct {
 }
 
 type FeatureSpec struct {
+	// +optional
+	FeatureSet string `json:"featureSet,omitempty"`
 	// Chart specifies the chart information that will be used by the FluxCD to install the respective feature
 	// +optional
 	Chart uiapi.ChartInfo `json:"chart,omitempty"`
