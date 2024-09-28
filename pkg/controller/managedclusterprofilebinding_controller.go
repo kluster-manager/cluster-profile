@@ -20,7 +20,7 @@ import (
 	"context"
 
 	profilev1alpha1 "github.com/kluster-manager/cluster-profile/apis/profile/v1alpha1"
-	"github.com/kluster-manager/cluster-profile/pkg/feature"
+	"github.com/kluster-manager/cluster-profile/pkg/feature_installer"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -75,7 +75,7 @@ func (r *ManagedClusterProfileBindingReconciler) Reconcile(ctx context.Context, 
 		featureInfo[val.FeatureSet] = append(featureInfo[val.FeatureSet], f)
 	}
 
-	if err = feature.EnableFeatures(ctx, r.Client, profileBinding, featureInfo, profile); err != nil {
+	if err = feature_installer.EnableFeatures(ctx, r.Client, profileBinding, featureInfo, profile); err != nil {
 		return reconcile.Result{}, err
 	}
 

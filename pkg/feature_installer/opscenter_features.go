@@ -14,17 +14,21 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package feature
+package feature_installer
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
 
+	profilev1alpha1 "github.com/kluster-manager/cluster-profile/apis/profile/v1alpha1"
 	"github.com/kluster-manager/cluster-profile/pkg/utils"
 
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
+	kmapi "kmodules.xyz/client-go/api/v1"
 	"kmodules.xyz/resource-metadata/hub"
 	"kubepack.dev/lib-helm/pkg/action"
 	"kubepack.dev/lib-helm/pkg/repo"
@@ -32,6 +36,51 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	releasesapi "x-helm.dev/apimachinery/apis/releases/v1alpha1"
 )
+
+func initializeServer(kc client.Client, fakeServer *FakeServer, profile *profilev1alpha1.ManagedClusterSetProfile, clusterMetadata kmapi.ClusterInfo) (map[string]interface{}, error) {
+	overrides := make(map[string]interface{})
+	if profile.Spec.Features["opscenter-features"].Values != nil {
+		if err := json.Unmarshal(profile.Spec.Features["opscenter-features"].Values.Raw, &overrides); err != nil {
+			return nil, err
+		}
+	}
+
+	overrides["clusterMetadata"] = map[string]interface{}{
+		"uid":  clusterMetadata.UID,
+		"name": clusterMetadata.Name,
+	}
+
+	if clusterMetadata.CAPI.Provider != "" {
+		if err := unstructured.SetNestedField(overrides, clusterMetadata.CAPI.Provider, "clusterMetadata", "capi", "provider"); err != nil {
+			return nil, err
+		}
+	}
+	if clusterMetadata.CAPI.Namespace != "" {
+		if err := unstructured.SetNestedField(overrides, clusterMetadata.CAPI.Namespace, "clusterMetadata", "capi", "namespace"); err != nil {
+			return nil, err
+		}
+	}
+	if clusterMetadata.CAPI.ClusterName != "" {
+		if err := unstructured.SetNestedField(overrides, clusterMetadata.CAPI.Namespace, "clusterMetadata", "capi", "clusterName"); err != nil {
+			return nil, err
+		}
+	}
+	if len(clusterMetadata.ClusterManagers) > 0 {
+		if err := unstructured.SetNestedStringSlice(overrides, clusterMetadata.ClusterManagers, "clusterMetadata", "clusterManagers"); err != nil {
+			return nil, err
+		}
+	}
+
+	overrideValues, err := json.Marshal(overrides)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := installOpscenterFeatures(kc, overrideValues, fakeServer); err != nil {
+		return nil, err
+	}
+	return overrides, nil
+}
 
 func installOpscenterFeatures(kc client.Client, overrideValues []byte, fakeServer *FakeServer) error {
 	chartRef := releasesapi.ChartSourceRef{
