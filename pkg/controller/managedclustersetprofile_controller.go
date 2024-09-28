@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	profilev1alpha1 "github.com/kluster-manager/cluster-profile/apis/profile/v1alpha1"
+	"github.com/kluster-manager/cluster-profile/pkg/common"
 
 	"gomodules.xyz/x/strings"
 	core "k8s.io/api/core/v1"
@@ -90,7 +91,7 @@ func (r *ManagedClusterSetProfileReconciler) Reconcile(ctx context.Context, req 
 	for _, cluster := range clusters.Items {
 		clusterNameList = append(clusterNameList, cluster.Name)
 
-		clusterMetadata, err := getClusterMetadata(cluster)
+		clusterMetadata, err := GetClusterMetadata(cluster)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
@@ -99,6 +100,9 @@ func (r *ManagedClusterSetProfileReconciler) Reconcile(ctx context.Context, req 
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      fmt.Sprintf("%s-%s", profile.Name, cluster.Name),
 				Namespace: cluster.Name,
+				Labels: map[string]string{
+					common.ProfileLabel: profile.Name,
+				},
 				OwnerReferences: []metav1.OwnerReference{
 					*metav1.NewControllerRef(profile, profilev1alpha1.SchemeGroupVersion.WithKind(profilev1alpha1.ResourceKindManagedClusterSetProfile)),
 				},

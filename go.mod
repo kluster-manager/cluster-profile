@@ -12,7 +12,6 @@ require (
 	go.bytebuilders.dev/license-verifier v0.14.2
 	gomodules.xyz/jsonpatch/v2 v2.4.0
 	gomodules.xyz/logs v0.0.7
-	gomodules.xyz/oneliners v0.0.1
 	gomodules.xyz/x v0.0.17
 	helm.sh/helm/v3 v3.15.0
 	k8s.io/api v0.30.2

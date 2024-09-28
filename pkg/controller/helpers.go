@@ -28,7 +28,7 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-func getClusterMetadata(cluster v1.ManagedCluster) (kmapi.ClusterInfo, error) {
+func GetClusterMetadata(cluster v1.ManagedCluster) (kmapi.ClusterInfo, error) {
 	var clusterInfo kmapi.ClusterInfo
 	var clusterMetadata struct {
 		ClusterMetadata kmapi.ClusterInfo `yaml:"clusterMetadata"`

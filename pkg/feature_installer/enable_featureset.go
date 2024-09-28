@@ -119,6 +119,7 @@ func enableFeatureSet(ctx context.Context, kc client.Client, featureSet string, 
 			Namespace: profileBinding.Namespace,
 			Labels: map[string]string{
 				common.LabelAceFeatureSet: "true",
+				common.ProfileLabel:       profile.Name,
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				*metav1.NewControllerRef(profileBinding, profilev1alpha1.SchemeGroupVersion.WithKind(profilev1alpha1.ResourceKindManagedClusterProfileBinding)),
@@ -132,7 +133,7 @@ func enableFeatureSet(ctx context.Context, kc client.Client, featureSet string, 
 	}
 
 	var overrideValues map[string]interface{}
-	if overrideValues, err = initializeServer(kc, fakeServer, profile, profileBinding.Spec.ClusterMetadata); err != nil {
+	if overrideValues, err = InitializeServer(kc, fakeServer, profile, &profileBinding.Spec.ClusterMetadata); err != nil {
 		return err
 	}
 

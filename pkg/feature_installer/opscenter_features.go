@@ -37,7 +37,7 @@ import (
 	releasesapi "x-helm.dev/apimachinery/apis/releases/v1alpha1"
 )
 
-func initializeServer(kc client.Client, fakeServer *FakeServer, profile *profilev1alpha1.ManagedClusterSetProfile, clusterMetadata kmapi.ClusterInfo) (map[string]interface{}, error) {
+func InitializeServer(kc client.Client, fakeServer *FakeServer, profile *profilev1alpha1.ManagedClusterSetProfile, clusterMetadata *kmapi.ClusterInfo) (map[string]interface{}, error) {
 	overrides := make(map[string]interface{})
 	if profile.Spec.Features["opscenter-features"].Values != nil {
 		if err := json.Unmarshal(profile.Spec.Features["opscenter-features"].Values.Raw, &overrides); err != nil {
@@ -45,11 +45,12 @@ func initializeServer(kc client.Client, fakeServer *FakeServer, profile *profile
 		}
 	}
 
-	overrides["clusterMetadata"] = map[string]interface{}{
-		"uid":  clusterMetadata.UID,
-		"name": clusterMetadata.Name,
+	if clusterMetadata != nil {
+		overrides["clusterMetadata"] = map[string]interface{}{
+			"uid":  clusterMetadata.UID,
+			"name": clusterMetadata.Name,
+		}
 	}
-
 	if clusterMetadata.CAPI.Provider != "" {
 		if err := unstructured.SetNestedField(overrides, clusterMetadata.CAPI.Provider, "clusterMetadata", "capi", "provider"); err != nil {
 			return nil, err

@@ -256,8 +256,6 @@ func updateManifestWorK(ctx context.Context, fakeServer *FakeServer, kc client.C
 
 	_, err := cu.CreateOrPatch(ctx, kc, mw, func(obj client.Object, createOp bool) client.Object {
 		in := obj.(*workv1.ManifestWork)
-		in.ObjectMeta.Labels = make(map[string]string)
-		in.ObjectMeta.Labels[common.LabelAceFeatureSet] = "true"
 		in = mw
 		return in
 	})
