@@ -31,6 +31,7 @@ import (
 	fluxhelm "github.com/fluxcd/helm-controller/api/v2"
 	"gomodules.xyz/x/strings"
 	"helm.sh/helm/v3/pkg/release"
+	v1 "k8s.io/api/core/v1"
 	crdv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	crd_cs "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -93,6 +94,10 @@ func EnableFeatures(ctx context.Context, kc client.Client, profileBinding *profi
 		return nil
 	}
 
+	if err = createFeatureNamespaceManifestWork(ctx, kc, profile, profileBinding); err != nil {
+		return err
+	}
+
 	for fset, featureList := range featureInfo {
 		if err = enableFeatureSet(ctx, kc, fset, featureList, profile, profileBinding); err != nil {
 			return err
@@ -102,14 +107,74 @@ func EnableFeatures(ctx context.Context, kc client.Client, profileBinding *profi
 	return nil
 }
 
+func createFeatureNamespaceManifestWork(ctx context.Context, kc client.Client, profile *profilev1alpha1.ManagedClusterSetProfile, profileBinding *profilev1alpha1.ManagedClusterProfileBinding) error {
+	// <<<<<<<<       start fake-apiserver and apply base manifestWorkReplicaSet, feature-namespace manifestWork      >>>>>>>
+	var err error
+	var fakeServer *FakeServer
+	if fakeServer, err = startFakeApiServerAndApplyBaseManifestWorkReplicaSets(ctx, kc); err != nil {
+		return err
+	}
+
+	// apply 'feature-namespace' manifestWork
+	namespaceMW := workv1.ManifestWork{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      common.FeatureNamespaceManifestWorkName,
+			Namespace: profileBinding.Namespace,
+		},
+	}
+	err = kc.Get(ctx, client.ObjectKey{Name: common.FeatureNamespaceManifestWorkName, Namespace: profileBinding.Namespace}, &namespaceMW)
+	if err != nil && !errors.IsNotFound(err) {
+		return err
+	}
+
+	if err = applyManifestWork(ctx, fakeServer.FakeClient, namespaceMW); err != nil {
+		return err
+	}
+
+	fakeServer.FakeS.Checkpoint()
+
+	// <<<<<<<<       all necessary resources applied on fake-apiserver and set 'checkpoint' to differentiate modified objects       >>>>>>>
+
+	for _, n := range profile.Spec.Namespaces {
+		ns := &v1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: n,
+			},
+		}
+
+		_, err := cu.CreateOrPatch(ctx, fakeServer.FakeClient, ns, func(obj client.Object, createOp bool) client.Object {
+			in := obj.(*v1.Namespace)
+			in = ns
+			return in
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	return updateManifestWork(ctx, fakeServer, kc, &namespaceMW)
+}
+
 func enableFeatureSet(ctx context.Context, kc client.Client, featureSet string, features []string, profile *profilev1alpha1.ManagedClusterSetProfile, profileBinding *profilev1alpha1.ManagedClusterProfileBinding) error {
 	if featureSet == "opscenter-core" && (!strings.Contains(features, "opscenter-features") || !strings.Contains(features, "kube-ui-server")) {
 		return pkgerr.New("opscenter-features and kube-ui-server should be in the feature list")
 	}
 
+	// <<<<<<<<       start fake-apiserver and apply base manifestWorkReplicaSet, feature-namespace manifestWork and helm install 'opscenter-features' chart       >>>>>>>
 	var err error
 	var fakeServer *FakeServer
 	if fakeServer, err = startFakeApiServerAndApplyBaseManifestWorkReplicaSets(ctx, kc); err != nil {
+		return err
+	}
+
+	// apply 'feature-namespace' manifestWork
+	var namespaceMW workv1.ManifestWork
+	err = kc.Get(ctx, client.ObjectKey{Name: common.FeatureNamespaceManifestWorkName, Namespace: profileBinding.Namespace}, &namespaceMW)
+	if err != nil && !errors.IsNotFound(err) {
+		return err
+	}
+
+	if err = applyManifestWork(ctx, fakeServer.FakeClient, namespaceMW); err != nil {
 		return err
 	}
 
@@ -138,6 +203,8 @@ func enableFeatureSet(ctx context.Context, kc client.Client, featureSet string, 
 	}
 
 	fakeServer.FakeS.Checkpoint()
+
+	// <<<<<<<<       all necessary resources applied on fake-apiserver and set 'checkpoint' to differentiate modified objects       >>>>>>>
 
 	err = resources.RegisterCRDs(fakeServer.FakeRestConfig)
 	if err != nil {
@@ -221,7 +288,7 @@ func applyFeatureSet(ctx context.Context, kc client.Client, mw *workv1.ManifestW
 		return err
 	}
 
-	if err = updateManifestWorK(ctx, fakeServer, kc, featureSet, hub.BootstrapHelmRepositoryNamespace(), mw); err != nil {
+	if err = updateManifestWork(ctx, fakeServer, kc, mw); err != nil {
 		return err
 	}
 	return nil

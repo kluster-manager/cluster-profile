@@ -17,7 +17,8 @@ limitations under the License.
 package common
 
 const (
-	ClusterClaimClusterInfo = "cluster.ace.info"
-	LabelAceFeatureSet      = "featureset.appscode.com/managed"
-	ProfileLabel            = "profile.appscode.com/name"
+	ClusterClaimClusterInfo          = "cluster.ace.info"
+	LabelAceFeatureSet               = "featureset.appscode.com/managed"
+	ProfileLabel                     = "profile.appscode.com/name"
+	FeatureNamespaceManifestWorkName = "ace-feature-namespace"
 )

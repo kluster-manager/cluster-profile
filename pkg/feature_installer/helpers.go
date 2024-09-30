@@ -233,7 +233,7 @@ func waitForReleaseToBeCreated(kc client.Client, name []string) error {
 	})
 }
 
-func updateManifestWorK(ctx context.Context, fakeServer *FakeServer, kc client.Client, featureSetName, ns string, mw *workv1.ManifestWork) error {
+func updateManifestWork(ctx context.Context, fakeServer *FakeServer, kc client.Client, mw *workv1.ManifestWork) error {
 	logger := log.FromContext(ctx)
 	// fake-apiserver shutdown
 	if err := fakeServer.FakeSrv.Shutdown(ctx); err != nil {
