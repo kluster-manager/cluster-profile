@@ -25,6 +25,7 @@ import (
 
 	"gomodules.xyz/x/strings"
 	core "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -70,7 +71,11 @@ func (r *ManagedClusterSetProfileReconciler) Reconcile(ctx context.Context, req 
 
 	var managedClusterSet clusterv1beta2.ManagedClusterSet
 	err = r.Get(ctx, types.NamespacedName{Name: profile.Name}, &managedClusterSet)
-	if err != nil {
+	if err != nil && errors.IsNotFound(err) {
+		if err = r.Delete(ctx, profile); err != nil {
+			return reconcile.Result{}, err
+		}
+	} else if err != nil {
 		return reconcile.Result{}, err
 	}
 

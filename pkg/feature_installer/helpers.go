@@ -173,7 +173,7 @@ func applyManifestWorkReplicaSet(ctx context.Context, kc client.Client, workRepl
 	return nil
 }
 
-func applyManifestWork(ctx context.Context, kc client.Client, workReplicaSet workv1.ManifestWork) error {
+func applyManifestWork(ctx context.Context, kc client.Client, workReplicaSet *workv1.ManifestWork) error {
 	for _, m := range workReplicaSet.Spec.Workload.Manifests {
 		data, err := m.MarshalJSON()
 		if err != nil {
@@ -243,15 +243,25 @@ func updateManifestWork(ctx context.Context, fakeServer *FakeServer, kc client.C
 
 	current, _ := fakeServer.FakeS.Export()
 	for _, item := range current {
-		ww := workv1.Manifest{}
-		metadata := item.Object["metadata"].(map[string]interface{})
-		delete(metadata, "resourceVersion")
-
-		err := utils.Copy(item.Object, &ww)
+		m := workv1.Manifest{}
+		kind, name, err := getKindAndName(item.Object)
 		if err != nil {
 			return err
 		}
-		mw.Spec.Workload.Manifests = append(mw.Spec.Workload.Manifests, ww)
+
+		if (kind == "CustomResourceDefinition" && name == "appreleases.drivers.x-helm.dev") ||
+			(kind == "AppRelease" && name == mw.Name) {
+			continue
+		}
+
+		metadata := item.Object["metadata"].(map[string]interface{})
+		delete(metadata, "resourceVersion")
+
+		if err = utils.Copy(item.Object, &m); err != nil {
+			return err
+		}
+
+		mw.Spec.Workload.Manifests = append(mw.Spec.Workload.Manifests, m)
 	}
 
 	_, err := cu.CreateOrPatch(ctx, kc, mw, func(obj client.Object, createOp bool) client.Object {
@@ -280,7 +290,7 @@ func UpdateFeatureSetValues(ctx context.Context, fs string, kc client.Client, va
 			return nil, err
 		} else if ok {
 			features = append(features, feature.Name)
-			if err = updateHelmReleaseDependency(ctx, kc, values, &feature, true); err != nil {
+			if err = updateHelmReleaseDependency(ctx, kc, values, &feature); err != nil {
 				return nil, err
 			}
 		}
@@ -371,4 +381,23 @@ func getAppliedFeatureList(ctx context.Context, kc client.Client, profileBinding
 		}
 	}
 	return appliedFeatures, nil
+}
+
+func getKindAndName(item map[string]interface{}) (string, string, error) {
+	unstructuredObj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&item)
+	if err != nil {
+		return "", "", err
+	}
+
+	unstructuredResource := unstructured.Unstructured{Object: unstructuredObj}
+	kind, found, err := unstructured.NestedString(unstructuredResource.Object, "kind")
+	if err != nil || !found {
+		return "", "", err
+	}
+
+	name, found, err := unstructured.NestedString(unstructuredResource.Object, "metadata", "name")
+	if err != nil || !found {
+		return "", "", err
+	}
+	return kind, name, nil
 }

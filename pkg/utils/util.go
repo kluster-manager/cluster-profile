@@ -26,6 +26,7 @@ import (
 
 func init() {
 	gob.Register(map[string]interface{}{})
+	gob.Register([]interface{}{})
 }
 
 func DeepCopyMap(m map[string]interface{}) (map[string]interface{}, error) {

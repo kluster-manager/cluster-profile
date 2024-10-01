@@ -56,7 +56,7 @@ func createHR(featureName, featureSetName, ns string, profile *profilev1alpha1.M
 				},
 			},
 			Install: &fluxhelm.Install{
-				CreateNamespace: false,
+				CreateNamespace: profile.Spec.Features[featureName].Chart.CreateNamespace,
 				Remediation: &fluxhelm.InstallRemediation{
 					Retries: -1,
 				},

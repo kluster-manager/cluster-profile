@@ -94,16 +94,21 @@ func EnableFeatures(ctx context.Context, kc client.Client, profileBinding *profi
 		return nil
 	}
 
-	if err = createFeatureNamespaceManifestWork(ctx, kc, profile, profileBinding); err != nil {
-		return err
-	}
-
 	for fset, featureList := range featureInfo {
 		if err = enableFeatureSet(ctx, kc, fset, featureList, profile, profileBinding); err != nil {
 			return err
 		}
 	}
 
+	for fset, featureList := range featureInfo {
+		var mw workv1.ManifestWork
+		if err = kc.Get(ctx, types.NamespacedName{Name: fset, Namespace: profileBinding.Namespace}, &mw); err != nil {
+			return err
+		}
+		if err = removeHRFomManifestWork(ctx, kc, &mw, featureList); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -127,8 +132,10 @@ func createFeatureNamespaceManifestWork(ctx context.Context, kc client.Client, p
 		return err
 	}
 
-	if err = applyManifestWork(ctx, fakeServer.FakeClient, namespaceMW); err != nil {
-		return err
+	if err == nil {
+		if err = applyManifestWork(ctx, fakeServer.FakeClient, &namespaceMW); err != nil {
+			return err
+		}
 	}
 
 	fakeServer.FakeS.Checkpoint()
@@ -174,7 +181,7 @@ func enableFeatureSet(ctx context.Context, kc client.Client, featureSet string, 
 		return err
 	}
 
-	if err = applyManifestWork(ctx, fakeServer.FakeClient, namespaceMW); err != nil {
+	if err = applyManifestWork(ctx, fakeServer.FakeClient, &namespaceMW); err != nil {
 		return err
 	}
 
@@ -199,6 +206,10 @@ func enableFeatureSet(ctx context.Context, kc client.Client, featureSet string, 
 
 	var overrideValues map[string]interface{}
 	if overrideValues, err = InitializeServer(kc, fakeServer, profile, &profileBinding.Spec.ClusterMetadata); err != nil {
+		return err
+	}
+
+	if err = applyManifestWork(ctx, fakeServer.FakeClient, mw); err != nil {
 		return err
 	}
 
@@ -241,11 +252,7 @@ func enableFeatureSet(ctx context.Context, kc client.Client, featureSet string, 
 		return applyFeatureSet(ctx, kc, mw, fakeServer, featureSet, []string{"kube-ui-server"})
 	}
 
-	if err = applyFeatureSet(ctx, kc, mw, fakeServer, featureSet, features); err != nil {
-		return err
-	}
-
-	return removeHRFomManifestWork(ctx, kc, mw, features)
+	return applyFeatureSet(ctx, kc, mw, fakeServer, featureSet, features)
 }
 
 func applyFeatureSet(ctx context.Context, kc client.Client, mw *workv1.ManifestWork, fakeServer *FakeServer, featureSet string, features []string) error {
@@ -263,6 +270,8 @@ func applyFeatureSet(ctx context.Context, kc client.Client, mw *workv1.ManifestW
 	if _, err = UpdateFeatureSetValues(ctx, fsObj.Name, fakeServer.FakeClient, model); err != nil {
 		return err
 	}
+
+	// TODO: update values by users given values which we stored in profile
 
 	reg := NewVirtualRegistry(fakeServer.FakeClient)
 	err = applyCRDs(fakeServer.FakeRestConfig, reg, fsObj.Spec.Chart)
@@ -316,12 +325,16 @@ func removeHRFomManifestWork(ctx context.Context, kc client.Client, mw *workv1.M
 				return err
 			}
 
-			if strings.Contains(features, name) {
+			if !strings.Contains(features, name) {
 				logger.Info(fmt.Sprintf("Removing HelmRelease manifest with name: %s", name))
 				continue
 			}
 		}
 		updatedManifests = append(updatedManifests, manifest)
+	}
+
+	if reflect.DeepEqual(mw.Spec.Workload.Manifests, updatedManifests) {
+		return nil
 	}
 
 	mw.Spec.Workload.Manifests = updatedManifests
@@ -551,7 +564,7 @@ func generateHelmReleaseForFeature(kc client.Client, fs *uiapi.FeatureSet, featu
 		return err
 	}
 
-	return updateHelmReleaseDependency(context.Background(), kc, curValues, feature, false)
+	return updateHelmReleaseDependency(context.Background(), kc, curValues, feature)
 }
 
 func getFeaturePathInValues(feature string) string {
@@ -567,7 +580,7 @@ func setLabelsToHelmReleases(fs *uiapi.FeatureSet, feature *uiapi.Feature, value
 	return unstructured.SetNestedField(values, label, "resources", featureKey, "metadata", "labels")
 }
 
-func updateHelmReleaseDependency(ctx context.Context, kc client.Client, values map[string]any, feature *uiapi.Feature, isOCM bool) (err error) {
+func updateHelmReleaseDependency(ctx context.Context, kc client.Client, values map[string]any, feature *uiapi.Feature) (err error) {
 	featureKey := getFeaturePathInValues(feature.Name)
 	if len(feature.Spec.Requirements.Features) > 0 {
 		dependsOn := make([]kmapi.ObjectReference, 0, len(feature.Spec.Requirements.Features))
@@ -578,7 +591,7 @@ func updateHelmReleaseDependency(ctx context.Context, kc client.Client, values m
 				return err
 			}
 
-			if isOCM && reqFeature.Name == "license-proxyserver" {
+			if reqFeature.Name == "license-proxyserver" {
 				continue
 			}
 
