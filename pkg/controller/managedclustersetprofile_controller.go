@@ -23,6 +23,7 @@ import (
 	profilev1alpha1 "github.com/kluster-manager/cluster-profile/apis/profile/v1alpha1"
 	"github.com/kluster-manager/cluster-profile/pkg/common"
 
+	"gomodules.xyz/oneliners"
 	"gomodules.xyz/x/strings"
 	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -90,12 +91,31 @@ func (r *ManagedClusterSetProfileReconciler) Reconcile(ctx context.Context, req 
 		return reconcile.Result{}, err
 	}
 
+	profileBindingList := &profilev1alpha1.ManagedClusterProfileBindingList{}
+	err = r.List(ctx, profileBindingList)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	oneliners.PrettyJson(profile.Name, "profile")
+
 	clusterNameList := make([]string, 0, len(clusters.Items))
+	for _, cluster := range clusters.Items {
+		clusterNameList = append(clusterNameList, cluster.Name)
+	}
+
+	for _, pb := range profileBindingList.Items {
+		if !strings.Contains(clusterNameList, pb.Namespace) {
+			if err = r.Delete(ctx, &pb); err != nil {
+				return reconcile.Result{}, err
+			}
+		}
+	}
+
+	oneliners.PrettyJson(clusterNameList, "clusterNameList")
 
 	// create ManagedClusterProfileBinding for every cluster of this clusterSet
 	for _, cluster := range clusters.Items {
-		clusterNameList = append(clusterNameList, cluster.Name)
-
 		clusterMetadata, err := GetClusterMetadata(cluster)
 		if err != nil {
 			return reconcile.Result{}, err
@@ -125,21 +145,6 @@ func (r *ManagedClusterSetProfileReconciler) Reconcile(ctx context.Context, req 
 		})
 		if err != nil {
 			return reconcile.Result{}, err
-		}
-	}
-
-	profileBindingList := &profilev1alpha1.ManagedClusterProfileBindingList{}
-	err = r.List(ctx, profileBindingList)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
-	for _, pb := range profileBindingList.Items {
-		clusterName := pb.Namespace
-		if !strings.Contains(clusterNameList, clusterName) {
-			if err = r.Delete(ctx, &pb); err != nil {
-				return reconcile.Result{}, err
-			}
 		}
 	}
 

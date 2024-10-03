@@ -18,6 +18,7 @@ package feature_installer
 
 import (
 	"context"
+	"encoding/json"
 	pkgerr "errors"
 	"fmt"
 	"reflect"
@@ -187,13 +188,13 @@ func enableFeatureSet(ctx context.Context, kc client.Client, featureSet string, 
 			return err
 		}
 
-		return applyFeatureSet(ctx, kc, mw, fakeServer, featureSet, []string{"kube-ui-server"})
+		return applyFeatureSet(ctx, kc, mw, fakeServer, featureSet, []string{"kube-ui-server"}, profile)
 	}
 
-	return applyFeatureSet(ctx, kc, mw, fakeServer, featureSet, features)
+	return applyFeatureSet(ctx, kc, mw, fakeServer, featureSet, features, profile)
 }
 
-func applyFeatureSet(ctx context.Context, kc client.Client, mw *workv1.ManifestWork, fakeServer *FakeServer, featureSet string, features []string) error {
+func applyFeatureSet(ctx context.Context, kc client.Client, mw *workv1.ManifestWork, fakeServer *FakeServer, featureSet string, features []string, profile *profilev1alpha1.ManagedClusterSetProfile) error {
 	logger := klog.FromContext(ctx)
 	var err error
 	var fsObj uiapi.FeatureSet
@@ -210,6 +211,25 @@ func applyFeatureSet(ctx context.Context, kc client.Client, mw *workv1.ManifestW
 	}
 
 	// TODO: update values by users given values which we stored in profile
+	for _, f := range features {
+		featureKey := getFeaturePathInValues(f)
+		curValues, found, err := unstructured.NestedMap(model, "resources", featureKey, "spec", "values")
+		if err != nil || !found {
+			return err
+		}
+
+		var valuesMap map[string]interface{}
+		if profile.Spec.Features[f].Values != nil {
+			err := json.Unmarshal(profile.Spec.Features[f].Values.Raw, &valuesMap)
+			if err != nil {
+				return err
+			}
+		}
+		finalValues := utils.MergeMaps(curValues, valuesMap)
+		if err = unstructured.SetNestedMap(model, finalValues, "resources", featureKey, "spec", "values"); err != nil {
+			return err
+		}
+	}
 
 	reg := NewVirtualRegistry(fakeServer.FakeClient)
 	err = applyCRDs(fakeServer.FakeRestConfig, reg, fsObj.Spec.Chart)
