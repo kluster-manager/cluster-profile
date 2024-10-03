@@ -33,12 +33,25 @@ import (
 	"kubepack.dev/lib-helm/pkg/action"
 	"kubepack.dev/lib-helm/pkg/repo"
 	"kubepack.dev/lib-helm/pkg/values"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	releasesapi "x-helm.dev/apimachinery/apis/releases/v1alpha1"
 )
 
-func InitializeServer(kc client.Client, fakeServer *FakeServer, profile *profilev1alpha1.ManagedClusterSetProfile, clusterMetadata *kmapi.ClusterInfo) (map[string]interface{}, error) {
+func InitializeServer(fakeServer *FakeServer, profile *profilev1alpha1.ManagedClusterSetProfile, clusterMetadata *kmapi.ClusterInfo, chartRef *releasesapi.ChartSourceRef) (map[string]interface{}, error) {
 	overrides := make(map[string]interface{})
+	if profile.Spec.Features["opscenter-features"].Chart.SourceRef.Name != "" {
+		chart := profile.Spec.Features["opscenter-features"].Chart
+		chartRef = &releasesapi.ChartSourceRef{
+			Name:    chart.Name,
+			Version: chart.Version,
+			SourceRef: kmapi.TypedObjectReference{
+				APIGroup:  releasesapi.SourceGroupHelmRepository,
+				Kind:      releasesapi.SourceKindHelmRepository,
+				Name:      hub.BootstrapHelmRepositoryName(),
+				Namespace: hub.BootstrapHelmRepositoryNamespace(),
+			},
+		}
+	}
+
 	if profile.Spec.Features["opscenter-features"].Values != nil {
 		if err := json.Unmarshal(profile.Spec.Features["opscenter-features"].Values.Raw, &overrides); err != nil {
 			return nil, err
@@ -77,19 +90,13 @@ func InitializeServer(kc client.Client, fakeServer *FakeServer, profile *profile
 		return nil, err
 	}
 
-	if err := installOpscenterFeatures(kc, overrideValues, fakeServer); err != nil {
+	if err := installOpscenterFeatures(overrideValues, fakeServer, chartRef); err != nil {
 		return nil, err
 	}
 	return overrides, nil
 }
 
-func installOpscenterFeatures(kc client.Client, overrideValues []byte, fakeServer *FakeServer) error {
-	chartRef := releasesapi.ChartSourceRef{
-		Name:      hub.ChartOpscenterFeatures,
-		Version:   "",
-		SourceRef: hub.BootstrapHelmRepository(kc),
-	}
-
+func installOpscenterFeatures(overrideValues []byte, fakeServer *FakeServer, chartRef *releasesapi.ChartSourceRef) error {
 	deployOpts := &action.DeployOptions{
 		ChartSourceFlatRef: releasesapi.ChartSourceFlatRef{
 			Name:            chartRef.Name,
@@ -116,8 +123,8 @@ func installOpscenterFeatures(kc client.Client, overrideValues []byte, fakeServe
 	return installChart(hub.ChartOpscenterFeatures, hub.BootstrapHelmRepositoryNamespace(), fakeServer, chartRef, deployOpts)
 }
 
-func installChart(name, namespace string, fakeServer *FakeServer, chartRef releasesapi.ChartSourceRef, deployOpts *action.DeployOptions) error {
-	err := applyCRDs(fakeServer.FakeRestConfig, NewVirtualRegistry(fakeServer.FakeClient), chartRef)
+func installChart(name, namespace string, fakeServer *FakeServer, chartRef *releasesapi.ChartSourceRef, deployOpts *action.DeployOptions) error {
+	err := applyCRDs(fakeServer.FakeRestConfig, NewVirtualRegistry(fakeServer.FakeClient), *chartRef)
 	if err != nil {
 		return err
 	}

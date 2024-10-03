@@ -22,7 +22,6 @@ import (
 	pkgerr "errors"
 	"fmt"
 	"reflect"
-	"sort"
 	kstr "strings"
 
 	profilev1alpha1 "github.com/kluster-manager/cluster-profile/apis/profile/v1alpha1"
@@ -77,23 +76,10 @@ func NewVirtualRegistry(kc client.Client) repo.IRegistry {
 }
 
 func EnableFeatures(ctx context.Context, kc client.Client, profileBinding *profilev1alpha1.ManagedClusterProfileBinding, featureInfo map[string][]string, profile *profilev1alpha1.ManagedClusterSetProfile) error {
+	logger := klog.FromContext(ctx)
+	logger.Info(fmt.Sprintf("Profile: %s, ProfileBinding: %s, FeatureSetInfo: %+v", profile.Name, profileBinding.Name, featureInfo))
+
 	var err error
-	appliedFeatures, err := getAppliedFeatureList(ctx, kc, profileBinding)
-	if err != nil {
-		return err
-	}
-
-	features := make([]string, 0)
-	for _, val := range featureInfo {
-		features = append(features, val...)
-	}
-	sort.Strings(appliedFeatures)
-	sort.Strings(features)
-	if reflect.DeepEqual(appliedFeatures, features) {
-		// all requested features already applied on spoke cluster
-		return nil
-	}
-
 	for fset, featureList := range featureInfo {
 		if err = enableFeatureSet(ctx, kc, fset, featureList, profile, profileBinding); err != nil {
 			return err
@@ -102,7 +88,7 @@ func EnableFeatures(ctx context.Context, kc client.Client, profileBinding *profi
 
 	for fset, featureList := range featureInfo {
 		var mw workv1.ManifestWork
-		if err = kc.Get(ctx, types.NamespacedName{Name: fset, Namespace: profileBinding.Namespace}, &mw); err != nil {
+		if err = kc.Get(ctx, types.NamespacedName{Name: fset, Namespace: profileBinding.Namespace}, &mw); err != nil && !errors.IsNotFound(err) {
 			return err
 		}
 		if err = removeHRFomManifestWork(ctx, kc, &mw, featureList); err != nil {
@@ -114,13 +100,16 @@ func EnableFeatures(ctx context.Context, kc client.Client, profileBinding *profi
 
 func enableFeatureSet(ctx context.Context, kc client.Client, featureSet string, features []string, profile *profilev1alpha1.ManagedClusterSetProfile, profileBinding *profilev1alpha1.ManagedClusterProfileBinding) error {
 	if featureSet == "opscenter-core" && (!strings.Contains(features, "opscenter-features") || !strings.Contains(features, "kube-ui-server")) {
-		return pkgerr.New("opscenter-features and kube-ui-server should be in the feature list")
+		return pkgerr.New("ensure opscenter-features and kube-ui-server are included in the feature list")
 	}
+
+	logger := klog.FromContext(ctx)
+	logger.Info(fmt.Sprintf("Profile: %s,  ProfileBinding: %s, FeatureSet: %s, Features: %+v", profile.Name, profileBinding.Name, featureSet, features))
 
 	// <<<<<<<<       start fake-apiserver and apply base manifestWorkReplicaSet, feature-namespace manifestWork and helm install 'opscenter-features' chart       >>>>>>>
 	var err error
 	var fakeServer *FakeServer
-	if fakeServer, err = startFakeApiServerAndApplyBaseManifestWorkReplicaSets(ctx, kc); err != nil {
+	if fakeServer, err = StartFakeApiServerAndApplyBaseManifestWorkReplicaSets(ctx, kc); err != nil {
 		return err
 	}
 
@@ -144,11 +133,7 @@ func enableFeatureSet(ctx context.Context, kc client.Client, featureSet string, 
 	}
 
 	var overrideValues map[string]interface{}
-	if overrideValues, err = InitializeServer(kc, fakeServer, profile, &profileBinding.Spec.ClusterMetadata); err != nil {
-		return err
-	}
-
-	if err = applyManifestWork(ctx, fakeServer.FakeClient, mw); err != nil {
+	if overrideValues, err = InitializeServer(fakeServer, profile, &profileBinding.Spec.ClusterMetadata, nil); err != nil {
 		return err
 	}
 
@@ -190,7 +175,6 @@ func enableFeatureSet(ctx context.Context, kc client.Client, featureSet string, 
 
 		return applyFeatureSet(ctx, kc, mw, fakeServer, featureSet, []string{"kube-ui-server"}, profile)
 	}
-
 	return applyFeatureSet(ctx, kc, mw, fakeServer, featureSet, features, profile)
 }
 
@@ -210,17 +194,17 @@ func applyFeatureSet(ctx context.Context, kc client.Client, mw *workv1.ManifestW
 		return err
 	}
 
-	// TODO: update values by users given values which we stored in profile
+	// Update values based on user-provided inputs stored in the profile
 	for _, f := range features {
 		featureKey := getFeaturePathInValues(f)
-		curValues, found, err := unstructured.NestedMap(model, "resources", featureKey, "spec", "values")
-		if err != nil || !found {
+		curValues, _, err := unstructured.NestedMap(model, "resources", featureKey, "spec", "values")
+		if err != nil {
 			return err
 		}
 
 		var valuesMap map[string]interface{}
 		if profile.Spec.Features[f].Values != nil {
-			err := json.Unmarshal(profile.Spec.Features[f].Values.Raw, &valuesMap)
+			err = json.Unmarshal(profile.Spec.Features[f].Values.Raw, &valuesMap)
 			if err != nil {
 				return err
 			}
@@ -296,6 +280,12 @@ func removeHRFomManifestWork(ctx context.Context, kc client.Client, mw *workv1.M
 	}
 
 	mw.Spec.Workload.Manifests = updatedManifests
+
+	if len(updatedManifests) == 0 {
+		if err := kc.Delete(ctx, mw); err != nil {
+			return err
+		}
+	}
 
 	_, err := cu.CreateOrPatch(ctx, kc, mw, func(obj client.Object, createOp bool) client.Object {
 		in := obj.(*workv1.ManifestWork)
@@ -563,7 +553,6 @@ func updateHelmReleaseDependency(ctx context.Context, kc client.Client, values m
 			if !status.enabled || status.managed {
 				dependsOn = append(dependsOn, kmapi.ObjectReference{
 					Name: reqFeature.Name,
-					// Name: fmt.Sprintf("%s-%s", reqFeature.Spec.FeatureSet, reqFeature.Name),
 				})
 			}
 		}

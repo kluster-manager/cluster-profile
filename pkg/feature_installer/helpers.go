@@ -129,7 +129,7 @@ func initializeFakeServer() (*http.Server, *pkg.Server, *rest.Config, *api.Confi
 	return srv, s, restcfg, kubecfg
 }
 
-func startFakeApiServerAndApplyBaseManifestWorkReplicaSets(ctx context.Context, kc client.Client) (*FakeServer, error) {
+func StartFakeApiServerAndApplyBaseManifestWorkReplicaSets(ctx context.Context, kc client.Client) (*FakeServer, error) {
 	var fakeServer FakeServer
 	var err error
 	fakeServer.FakeSrv, fakeServer.FakeS, fakeServer.FakeRestConfig, fakeServer.FakeApiConfig = initializeFakeServer()
@@ -242,6 +242,7 @@ func updateManifestWork(ctx context.Context, fakeServer *FakeServer, kc client.C
 	logger.Info("Server Exited Properly")
 
 	current, _ := fakeServer.FakeS.Export()
+	mw.Spec.Workload.Manifests = nil
 	for _, item := range current {
 		m := workv1.Manifest{}
 		kind, name, err := getKindAndName(item.Object)
