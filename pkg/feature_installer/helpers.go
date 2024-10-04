@@ -19,22 +19,15 @@ package feature_installer
 import (
 	"context"
 	"fmt"
-	golog "log"
 	"net/http"
-	"os"
 	"time"
 
-	profilev1alpha1 "github.com/kluster-manager/cluster-profile/apis/profile/v1alpha1"
-	"github.com/kluster-manager/cluster-profile/pkg/common"
 	"github.com/kluster-manager/cluster-profile/pkg/utils"
 
 	fluxhelm "github.com/fluxcd/helm-controller/api/v2"
-	"helm.sh/helm/v3/pkg/action"
-	"helm.sh/helm/v3/pkg/release"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -43,7 +36,6 @@ import (
 	"k8s.io/klog/v2"
 	cu "kmodules.xyz/client-go/client"
 	"kmodules.xyz/client-go/tools/clientcmd"
-	clientcmdutil "kmodules.xyz/client-go/tools/clientcmd"
 	"kmodules.xyz/fake-apiserver/pkg"
 	uiapi "kmodules.xyz/resource-metadata/apis/ui/v1alpha1"
 	"kubepack.dev/lib-helm/pkg/repo"
@@ -173,20 +165,6 @@ func applyManifestWorkReplicaSet(ctx context.Context, kc client.Client, workRepl
 	return nil
 }
 
-func applyManifestWork(ctx context.Context, kc client.Client, workReplicaSet *workv1.ManifestWork) error {
-	for _, m := range workReplicaSet.Spec.Workload.Manifests {
-		data, err := m.MarshalJSON()
-		if err != nil {
-			return err
-		}
-
-		if err = applyManifest(ctx, kc, data); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 func applyManifest(ctx context.Context, kc client.Client, data []byte) error {
 	req, err := runtime.Decode(unstructured.UnstructuredJSONScheme, data)
 	if err != nil {
@@ -196,40 +174,19 @@ func applyManifest(ctx context.Context, kc client.Client, data []byte) error {
 	return kc.Create(ctx, req.(*unstructured.Unstructured))
 }
 
-func diff(features1, features2 []string) []string {
-	features2Map := make(map[string]struct{})
-	for _, feature := range features2 {
-		features2Map[feature] = struct{}{}
-	}
-
-	var missingFeatures []string
-	for _, feature := range features1 {
-		if _, found := features2Map[feature]; !found {
-			missingFeatures = append(missingFeatures, feature)
-		}
-	}
-	return missingFeatures
-}
-
 func waitForReleaseToBeCreated(kc client.Client, name []string) error {
 	rel := fluxhelm.HelmRelease{}
 	return wait.PollUntilContextTimeout(context.Background(), pullInterval, waitTimeout, true, func(ctx context.Context) (done bool, err error) {
-		ok := true
 		for _, featureName := range name {
 			err = kc.Get(ctx, types.NamespacedName{Name: featureName, Namespace: "kubeops"}, &rel)
 			if err != nil && !errors.IsNotFound(err) {
 				return false, err
 			} else if err != nil && errors.IsNotFound(err) {
-				ok = false
 				return false, nil
 			}
 		}
 
-		if ok {
-			return true, nil
-		}
-
-		return false, nil
+		return true, nil
 	})
 }
 
@@ -267,7 +224,7 @@ func updateManifestWork(ctx context.Context, fakeServer *FakeServer, kc client.C
 
 	_, err := cu.CreateOrPatch(ctx, kc, mw, func(obj client.Object, createOp bool) client.Object {
 		in := obj.(*workv1.ManifestWork)
-		in = mw
+		in.Spec = mw.Spec
 		return in
 	})
 	if err != nil {
@@ -321,67 +278,6 @@ func getDefaultValues(reg repo.IRegistry, chartRef releasesapi.ChartSourceRef) (
 		return nil, err
 	}
 	return chart.Values, nil
-}
-
-func getHelmReleaseStatus(apiConfig *api.Config) (*release.Release, error) {
-	clientGetter := clientcmdutil.NewClientGetter(apiConfig)
-	cfg := new(action.Configuration)
-	err := cfg.Init(clientGetter, "kubeops", "secret", golog.New(os.Stderr, "", golog.Flags()).Printf)
-	if err != nil {
-		return nil, fmt.Errorf("helm config initialization: %v", err)
-	}
-
-	return action.NewStatus(cfg).Run("opscenter-features")
-}
-
-func getReleaseStatus(apiConfig *api.Config) (*release.Release, error) {
-	status, err := getHelmReleaseStatus(apiConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	return status, nil
-}
-
-func getAppliedFeatureList(ctx context.Context, kc client.Client, profileBinding *profilev1alpha1.ManagedClusterProfileBinding) ([]string, error) {
-	var err error
-	appliedFeatures := make([]string, 0)
-
-	var mwList workv1.ManifestWorkList
-	err = kc.List(ctx, &mwList, &client.ListOptions{
-		Namespace: profileBinding.Namespace,
-		LabelSelector: labels.SelectorFromSet(map[string]string{
-			common.LabelAceFeatureSet: "true",
-		}),
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
-	for _, manifestWork := range mwList.Items {
-		for _, manifest := range manifestWork.Spec.Workload.Manifests {
-			unstructuredObj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&manifest)
-			if err != nil {
-				return nil, err
-			}
-
-			unstructuredResource := unstructured.Unstructured{Object: unstructuredObj}
-			kind, found, err := unstructured.NestedString(unstructuredResource.Object, "kind")
-			if err != nil || !found {
-				return nil, err
-			}
-
-			if kind == "HelmRelease" {
-				name, found, err := unstructured.NestedString(unstructuredResource.Object, "metadata", "name")
-				if err != nil || !found {
-					return nil, err
-				}
-				appliedFeatures = append(appliedFeatures, name)
-			}
-		}
-	}
-	return appliedFeatures, nil
 }
 
 func getKindAndName(item map[string]interface{}) (string, string, error) {

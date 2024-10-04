@@ -105,7 +105,7 @@ func createHR(featureName, featureSetName, ns string, profile *profilev1alpha1.M
 	}
 	_, err := cu.CreateOrPatch(context.Background(), fakeServer.FakeClient, hr, func(obj client.Object, createOp bool) client.Object {
 		in := obj.(*fluxhelm.HelmRelease)
-		in = hr
+		in.Spec = hr.Spec
 		return in
 	})
 	if err != nil {

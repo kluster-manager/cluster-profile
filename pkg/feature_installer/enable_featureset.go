@@ -289,7 +289,7 @@ func removeHRFomManifestWork(ctx context.Context, kc client.Client, mw *workv1.M
 
 	_, err := cu.CreateOrPatch(ctx, kc, mw, func(obj client.Object, createOp bool) client.Object {
 		in := obj.(*workv1.ManifestWork)
-		in = mw
+		in.Spec = mw.Spec
 		return in
 	})
 	if err != nil {

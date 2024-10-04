@@ -120,10 +120,10 @@ func installOpscenterFeatures(overrideValues []byte, fakeServer *FakeServer, cha
 		DisableOpenAPIValidation: true,
 	}
 
-	return installChart(hub.ChartOpscenterFeatures, hub.BootstrapHelmRepositoryNamespace(), fakeServer, chartRef, deployOpts)
+	return installChart(fakeServer, chartRef, deployOpts)
 }
 
-func installChart(name, namespace string, fakeServer *FakeServer, chartRef *releasesapi.ChartSourceRef, deployOpts *action.DeployOptions) error {
+func installChart(fakeServer *FakeServer, chartRef *releasesapi.ChartSourceRef, deployOpts *action.DeployOptions) error {
 	err := applyCRDs(fakeServer.FakeRestConfig, NewVirtualRegistry(fakeServer.FakeClient), *chartRef)
 	if err != nil {
 		return err

@@ -20,8 +20,6 @@ import (
 	"bytes"
 	"encoding/gob"
 	"encoding/json"
-
-	"gomodules.xyz/jsonpatch/v2"
 )
 
 func init() {
@@ -51,24 +49,6 @@ func Copy(src any, dst any) error {
 		return err
 	}
 	return json.Unmarshal(jsonByte, dst)
-}
-
-func CreateJsonPatch(empty, custom interface{}) ([]byte, error) {
-	emptyBytes, err := json.Marshal(empty)
-	if err != nil {
-		return nil, err
-	}
-	customBytes, err := json.Marshal(custom)
-	if err != nil {
-		return nil, err
-	}
-
-	patch, err := jsonpatch.CreatePatch(emptyBytes, customBytes)
-	if err != nil {
-		return nil, err
-	}
-
-	return json.MarshalIndent(patch, "", "  ")
 }
 
 // MergeMaps merges the default and override maps, with values from the override map taking precedence.

@@ -10,7 +10,6 @@ require (
 	github.com/google/gofuzz v1.2.0
 	github.com/spf13/cobra v1.8.1
 	go.bytebuilders.dev/license-verifier v0.14.2
-	gomodules.xyz/jsonpatch/v2 v2.4.0
 	gomodules.xyz/logs v0.0.7
 	gomodules.xyz/x v0.0.17
 	helm.sh/helm/v3 v3.15.0
@@ -250,6 +249,7 @@ require (
 	gomodules.xyz/clock v0.0.0-20200817085942-06523dba733f // indirect
 	gomodules.xyz/encoding v0.0.8 // indirect
 	gomodules.xyz/flags v0.1.3 // indirect
+	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
 	gomodules.xyz/jsonpatch/v3 v3.0.1 // indirect
 	gomodules.xyz/jsonpath v0.0.2 // indirect
 	gomodules.xyz/mergo v0.3.13 // indirect

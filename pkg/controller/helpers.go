@@ -48,13 +48,6 @@ func GetClusterMetadata(cluster v1.ManagedCluster) (kmapi.ClusterInfo, error) {
 	return clusterInfo, errors.New("cluster info not found")
 }
 
-func isOpscenterFeaturesExistsInProfile(profile *profilev1alpha1.ManagedClusterSetProfile) bool {
-	if _, exists := profile.Spec.Features["opscenter-features"]; exists {
-		return true
-	}
-	return false
-}
-
 func validateFeatureList(profile *profilev1alpha1.ManagedClusterSetProfile) error {
 	requiredFeatures := []string{"opscenter-features", "kube-ui-server"}
 	for _, f := range requiredFeatures {
