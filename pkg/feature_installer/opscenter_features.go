@@ -63,25 +63,30 @@ func InitializeServer(fakeServer *FakeServer, profile *profilev1alpha1.ManagedCl
 			"uid":  clusterMetadata.UID,
 			"name": clusterMetadata.Name,
 		}
-	}
-	if clusterMetadata.CAPI.Provider != "" {
-		if err := unstructured.SetNestedField(overrides, clusterMetadata.CAPI.Provider, "clusterMetadata", "capi", "provider"); err != nil {
+
+		if err := overrideStashPresetsValues(overrides, clusterMetadata); err != nil {
 			return nil, err
 		}
-	}
-	if clusterMetadata.CAPI.Namespace != "" {
-		if err := unstructured.SetNestedField(overrides, clusterMetadata.CAPI.Namespace, "clusterMetadata", "capi", "namespace"); err != nil {
-			return nil, err
+
+		if clusterMetadata.CAPI.Provider != "" {
+			if err := unstructured.SetNestedField(overrides, clusterMetadata.CAPI.Provider, "clusterMetadata", "capi", "provider"); err != nil {
+				return nil, err
+			}
 		}
-	}
-	if clusterMetadata.CAPI.ClusterName != "" {
-		if err := unstructured.SetNestedField(overrides, clusterMetadata.CAPI.Namespace, "clusterMetadata", "capi", "clusterName"); err != nil {
-			return nil, err
+		if clusterMetadata.CAPI.Namespace != "" {
+			if err := unstructured.SetNestedField(overrides, clusterMetadata.CAPI.Namespace, "clusterMetadata", "capi", "namespace"); err != nil {
+				return nil, err
+			}
 		}
-	}
-	if len(clusterMetadata.ClusterManagers) > 0 {
-		if err := unstructured.SetNestedStringSlice(overrides, clusterMetadata.ClusterManagers, "clusterMetadata", "clusterManagers"); err != nil {
-			return nil, err
+		if clusterMetadata.CAPI.ClusterName != "" {
+			if err := unstructured.SetNestedField(overrides, clusterMetadata.CAPI.Namespace, "clusterMetadata", "capi", "clusterName"); err != nil {
+				return nil, err
+			}
+		}
+		if len(clusterMetadata.ClusterManagers) > 0 {
+			if err := unstructured.SetNestedStringSlice(overrides, clusterMetadata.ClusterManagers, "clusterMetadata", "clusterManagers"); err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -166,4 +171,26 @@ func DeployRelease(apiConfig *api.Config, deployOpts *action.DeployOptions) erro
 		fmt.Println(err)
 	}
 	return err
+}
+
+func overrideStashPresetsValues(overrides map[string]interface{}, clusterMetadata *kmapi.ClusterInfo) error {
+	if err := unstructured.SetNestedField(overrides, clusterMetadata.Name, "helm", "releases", "stash-presets", "values", "clusterMetadata", "name"); err != nil {
+		return err
+	}
+
+	if err := unstructured.SetNestedField(overrides, clusterMetadata.UID, "helm", "releases", "stash-presets", "values", "clusterMetadata", "uid"); err != nil {
+		return err
+	}
+
+	prefix := clusterMetadata.Name + "/backups"
+	provider, found, err := unstructured.NestedString(overrides, "helm", "releases", "stash-presets", "values", "kubestash", "backend", "provider")
+	if err != nil {
+		return err
+	}
+	if found {
+		if err = unstructured.SetNestedField(overrides, prefix, "helm", "releases", "stash-presets", "values", "kubestash", "backend", provider, "spec", "prefix"); err != nil {
+			return err
+		}
+	}
+	return nil
 }
