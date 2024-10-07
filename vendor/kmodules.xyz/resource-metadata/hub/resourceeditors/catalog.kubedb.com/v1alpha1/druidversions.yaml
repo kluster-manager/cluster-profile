@@ -1,0 +1,31 @@
+apiVersion: ui.k8s.appscode.com/v1alpha1
+kind: ResourceEditor
+metadata:
+  creationTimestamp: null
+  labels:
+    k8s.io/group: catalog.kubedb.com
+    k8s.io/kind: DruidVersion
+    k8s.io/resource: druidversions
+    k8s.io/version: v1alpha1
+  name: catalog.kubedb.com-v1alpha1-druidversions
+spec:
+  icons:
+  - src: https://cdn.appscode.com/k8s/icons/catalog.kubedb.com/druidversions.svg
+    type: image/svg+xml
+  - src: https://cdn.appscode.com/k8s/icons/catalog.kubedb.com/druidversions.png
+    type: image/png
+  resource:
+    group: catalog.kubedb.com
+    kind: DruidVersion
+    name: druidversions
+    scope: Cluster
+    version: v1alpha1
+  ui:
+    editor:
+      name: catalogkubedbcom-druidversion-editor
+      sourceRef:
+        apiGroup: source.toolkit.fluxcd.io
+        kind: HelmRepository
+        name: appscode-charts-oci
+      version: v0.5.0
+    enforceQuota: false

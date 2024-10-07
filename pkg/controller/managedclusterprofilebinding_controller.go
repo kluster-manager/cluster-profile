@@ -20,11 +20,16 @@ import (
 	"context"
 
 	profilev1alpha1 "github.com/kluster-manager/cluster-profile/apis/profile/v1alpha1"
+	"github.com/kluster-manager/cluster-profile/pkg/feature_installer"
 
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 // ManagedClusterProfileBindingReconciler reconciles a ManagedClusterProfileBinding object
@@ -47,16 +52,80 @@ type ManagedClusterProfileBindingReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.19.0/pkg/reconcile
 func (r *ManagedClusterProfileBindingReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
+	logger := log.FromContext(ctx)
+	logger.Info("Start reconciling")
 
-	// TODO(user): your logic here
+	profileBinding := &profilev1alpha1.ManagedClusterProfileBinding{}
+	err := r.Client.Get(ctx, req.NamespacedName, profileBinding)
+	if err != nil {
+		return reconcile.Result{}, client.IgnoreNotFound(err)
+	}
 
-	return ctrl.Result{}, nil
+	profile := &profilev1alpha1.ManagedClusterSetProfile{}
+	err = r.Client.Get(ctx, types.NamespacedName{Name: profileBinding.Spec.ProfileRef.Name}, profile)
+	if err != nil && errors.IsNotFound(err) {
+		if err = r.Delete(ctx, profileBinding); err != nil {
+			return reconcile.Result{}, err
+		}
+	} else if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	if err = validateFeatureList(profile); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	featureInfo := make(map[string][]string)
+	for f, val := range profile.Spec.Features {
+		featureInfo[val.FeatureSet] = append(featureInfo[val.FeatureSet], f)
+	}
+
+	if err = feature_installer.EnableFeatures(ctx, r.Client, profileBinding, featureInfo, profile); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	return reconcile.Result{}, nil
+}
+
+func (r *ManagedClusterProfileBindingReconciler) mapManagedClusterProfileBindingToProfile(ctx context.Context, obj client.Object) []reconcile.Request {
+	logger := log.FromContext(ctx)
+	profile, ok := obj.(*profilev1alpha1.ManagedClusterSetProfile)
+	if !ok {
+		return nil
+	}
+
+	logger.Info("ManagedClusterSetProfile updated", "name", profile.GetName())
+
+	profileBindingList := &profilev1alpha1.ManagedClusterProfileBindingList{}
+	err := r.List(ctx, profileBindingList)
+	if err != nil {
+		logger.Error(err, "Failed to list ManagedClusterProfileBinding objects")
+		return nil
+	}
+
+	var requests []reconcile.Request
+	for _, profileBinding := range profileBindingList.Items {
+		if profileBinding.Spec.ProfileRef.Name == profile.GetName() {
+			requests = append(requests, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      profileBinding.Name,
+					Namespace: profileBinding.Namespace,
+				},
+			})
+			logger.Info("Enqueuing request", "name", profileBinding.Name, "namespace", profileBinding.Namespace)
+		}
+	}
+
+	return requests
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *ManagedClusterProfileBindingReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&profilev1alpha1.ManagedClusterProfileBinding{}).
+		Watches(
+			&profilev1alpha1.ManagedClusterSetProfile{},
+			handler.EnqueueRequestsFromMapFunc(r.mapManagedClusterProfileBindingToProfile),
+		).
 		Complete(r)
 }
