@@ -22,7 +22,7 @@ require (
 	k8s.io/kube-openapi v0.0.0-20240703190633-0aa61b46e8c2
 	k8s.io/kubectl v0.30.1
 	k8s.io/utils v0.0.0-20240502163921-fe8a2dddb1d0
-	kmodules.xyz/client-go v0.30.16
+	kmodules.xyz/client-go v0.30.21
 	kmodules.xyz/fake-apiserver v0.0.1
 	kmodules.xyz/resource-metadata v0.18.14-0.20240925020608-73a6d2bd1a4e
 	kubepack.dev/lib-app v0.0.23-0.20240924113256-e97763847fe2
@@ -237,8 +237,8 @@ require (
 	gocloud.dev v0.26.0 // indirect
 	golang.org/x/crypto v0.27.0 // indirect
 	golang.org/x/exp v0.0.0-20240506185415-9bf2ced13842 // indirect
-	golang.org/x/net v0.27.0 // indirect
-	golang.org/x/oauth2 v0.21.0 // indirect
+	golang.org/x/net v0.29.0 // indirect
+	golang.org/x/oauth2 v0.22.0 // indirect
 	golang.org/x/sync v0.8.0 // indirect
 	golang.org/x/sys v0.25.0 // indirect
 	golang.org/x/term v0.24.0 // indirect

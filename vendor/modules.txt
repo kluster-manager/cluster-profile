@@ -1091,7 +1091,7 @@ golang.org/x/crypto/scrypt
 golang.org/x/exp/constraints
 golang.org/x/exp/maps
 golang.org/x/exp/slices
-# golang.org/x/net v0.27.0
+# golang.org/x/net v0.29.0
 ## explicit; go 1.18
 golang.org/x/net/html
 golang.org/x/net/html/atom
@@ -1106,7 +1106,7 @@ golang.org/x/net/proxy
 golang.org/x/net/publicsuffix
 golang.org/x/net/trace
 golang.org/x/net/websocket
-# golang.org/x/oauth2 v0.21.0
+# golang.org/x/oauth2 v0.22.0
 ## explicit; go 1.18
 golang.org/x/oauth2
 golang.org/x/oauth2/authhandler
@@ -1913,7 +1913,7 @@ kmodules.xyz/apiversion
 # kmodules.xyz/apply v0.29.0
 ## explicit; go 1.21.5
 kmodules.xyz/apply
-# kmodules.xyz/client-go v0.30.16
+# kmodules.xyz/client-go v0.30.21
 ## explicit; go 1.22.0
 kmodules.xyz/client-go
 kmodules.xyz/client-go/api/v1
