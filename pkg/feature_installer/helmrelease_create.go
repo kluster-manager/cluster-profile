@@ -29,6 +29,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	cu "kmodules.xyz/client-go/client"
 	uiapi "kmodules.xyz/resource-metadata/apis/ui/v1alpha1"
+	"kmodules.xyz/resource-metadata/hub"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -50,8 +51,8 @@ func createHR(featureName, featureSetName, ns string, profile *profilev1alpha1.M
 					Version: profile.Spec.Features[featureName].Chart.Version,
 					SourceRef: fluxhelm.CrossNamespaceObjectReference{
 						Kind:      profile.Spec.Features[featureName].Chart.SourceRef.Kind,
-						Name:      profile.Spec.Features[featureName].Chart.SourceRef.Name,
-						Namespace: profile.Spec.Features[featureName].Chart.SourceRef.Namespace,
+						Name:      hub.BootstrapHelmRepositoryName(),
+						Namespace: hub.BootstrapHelmRepositoryNamespace(),
 					},
 				},
 			},
