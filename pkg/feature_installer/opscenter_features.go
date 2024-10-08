@@ -64,10 +64,6 @@ func InitializeServer(fakeServer *FakeServer, profile *profilev1alpha1.ManagedCl
 			"name": clusterMetadata.Name,
 		}
 
-		if err := overrideStashPresetsValues(overrides, clusterMetadata); err != nil {
-			return nil, err
-		}
-
 		if clusterMetadata.CAPI != nil {
 			if clusterMetadata.CAPI.Provider != "" {
 				if err := unstructured.SetNestedField(overrides, clusterMetadata.CAPI.Provider, "clusterMetadata", "capi", "provider"); err != nil {
@@ -173,26 +169,4 @@ func DeployRelease(apiConfig *api.Config, deployOpts *action.DeployOptions) erro
 		fmt.Println(err)
 	}
 	return err
-}
-
-func overrideStashPresetsValues(overrides map[string]interface{}, clusterMetadata *kmapi.ClusterInfo) error {
-	if err := unstructured.SetNestedField(overrides, clusterMetadata.Name, "helm", "releases", "stash-presets", "values", "clusterMetadata", "name"); err != nil {
-		return err
-	}
-
-	if err := unstructured.SetNestedField(overrides, clusterMetadata.UID, "helm", "releases", "stash-presets", "values", "clusterMetadata", "uid"); err != nil {
-		return err
-	}
-
-	prefix := clusterMetadata.Name + "/backups"
-	provider, found, err := unstructured.NestedString(overrides, "helm", "releases", "stash-presets", "values", "kubestash", "backend", "provider")
-	if err != nil {
-		return err
-	}
-	if found {
-		if err = unstructured.SetNestedField(overrides, prefix, "helm", "releases", "stash-presets", "values", "kubestash", "backend", provider, "spec", "prefix"); err != nil {
-			return err
-		}
-	}
-	return nil
 }
