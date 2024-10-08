@@ -50,20 +50,3 @@ func Copy(src any, dst any) error {
 	}
 	return json.Unmarshal(jsonByte, dst)
 }
-
-// MergeMaps merges the default and override maps, with values from the override map taking precedence.
-func MergeMaps(defaults, overrides map[string]interface{}) map[string]interface{} {
-	merged := make(map[string]interface{})
-
-	// First, copy all default values into the merged map.
-	for key, value := range defaults {
-		merged[key] = value
-	}
-
-	// Now, override with values from the overrides map.
-	for key, value := range overrides {
-		merged[key] = value
-	}
-
-	return merged
-}
