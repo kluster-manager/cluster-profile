@@ -55,6 +55,7 @@ import (
 	"kubepack.dev/lib-app/pkg/editor"
 	"kubepack.dev/lib-app/pkg/handler"
 	"kubepack.dev/lib-helm/pkg/repo"
+	"kubepack.dev/lib-helm/pkg/values"
 	workv1 "open-cluster-management.io/api/work/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
@@ -163,8 +164,7 @@ func enableFeatureSet(ctx context.Context, kc client.Client, featureSet string, 
 			return err
 		}
 
-		mergedValues := utils.MergeMaps(defaultValues, overrideValues)
-
+		mergedValues := values.MergeMaps(defaultValues, overrideValues)
 		if err = createHR("opscenter-features", "opscenter-core", hub.BootstrapHelmRepositoryNamespace(), profile, featureObj, fakeServer, mergedValues); err != nil {
 			return err
 		}
@@ -209,7 +209,7 @@ func applyFeatureSet(ctx context.Context, kc client.Client, mw *workv1.ManifestW
 				return err
 			}
 		}
-		finalValues := utils.MergeMaps(curValues, valuesMap)
+		finalValues := values.MergeMaps(curValues, valuesMap)
 		if err = unstructured.SetNestedMap(model, finalValues, "resources", featureKey, "spec", "values"); err != nil {
 			return err
 		}
