@@ -68,19 +68,21 @@ func InitializeServer(fakeServer *FakeServer, profile *profilev1alpha1.ManagedCl
 			return nil, err
 		}
 
-		if clusterMetadata.CAPI.Provider != "" {
-			if err := unstructured.SetNestedField(overrides, clusterMetadata.CAPI.Provider, "clusterMetadata", "capi", "provider"); err != nil {
-				return nil, err
+		if clusterMetadata.CAPI != nil {
+			if clusterMetadata.CAPI.Provider != "" {
+				if err := unstructured.SetNestedField(overrides, clusterMetadata.CAPI.Provider, "clusterMetadata", "capi", "provider"); err != nil {
+					return nil, err
+				}
 			}
-		}
-		if clusterMetadata.CAPI.Namespace != "" {
-			if err := unstructured.SetNestedField(overrides, clusterMetadata.CAPI.Namespace, "clusterMetadata", "capi", "namespace"); err != nil {
-				return nil, err
+			if clusterMetadata.CAPI.Namespace != "" {
+				if err := unstructured.SetNestedField(overrides, clusterMetadata.CAPI.Namespace, "clusterMetadata", "capi", "namespace"); err != nil {
+					return nil, err
+				}
 			}
-		}
-		if clusterMetadata.CAPI.ClusterName != "" {
-			if err := unstructured.SetNestedField(overrides, clusterMetadata.CAPI.Namespace, "clusterMetadata", "capi", "clusterName"); err != nil {
-				return nil, err
+			if clusterMetadata.CAPI.ClusterName != "" {
+				if err := unstructured.SetNestedField(overrides, clusterMetadata.CAPI.Namespace, "clusterMetadata", "capi", "clusterName"); err != nil {
+					return nil, err
+				}
 			}
 		}
 		if len(clusterMetadata.ClusterManagers) > 0 {
