@@ -66,7 +66,7 @@ func InitializeServer(fakeServer *FakeServer, profile *profilev1alpha1.ManagedCl
 
 		if clusterMetadata.CAPI != nil {
 			if clusterMetadata.CAPI.Provider != "" {
-				if err := unstructured.SetNestedField(overrides, clusterMetadata.CAPI.Provider, "clusterMetadata", "capi", "provider"); err != nil {
+				if err := unstructured.SetNestedField(overrides, string(clusterMetadata.CAPI.Provider), "clusterMetadata", "capi", "provider"); err != nil {
 					return nil, err
 				}
 			}
