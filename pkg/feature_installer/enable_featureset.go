@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	pkgerr "errors"
 	"fmt"
-	v1 "k8s.io/api/core/v1"
 	"reflect"
 	kstr "strings"
 
@@ -134,11 +133,6 @@ func enableFeatureSet(ctx context.Context, kc client.Client, featureSet string, 
 		return err
 	}
 
-	var sec v1.Secret
-	if err = fakeServer.FakeClient.Get(ctx, types.NamespacedName{Name: "cluster-profile-manager-helmcert", Namespace: "kubeops"}, &sec); err != nil {
-		return err
-	}
-
 	var overrideValues map[string]interface{}
 	if overrideValues, err = InitializeServer(fakeServer, profile, &profileBinding.Spec.ClusterMetadata, nil); err != nil {
 		return err
@@ -161,8 +155,8 @@ func enableFeatureSet(ctx context.Context, kc client.Client, featureSet string, 
 
 		chartRef := releasesapi.ChartSourceRef{
 			Name:      hub.ChartOpscenterFeatures,
-			Version:   "",
-			SourceRef: hub.BootstrapHelmRepository(kc),
+			Version:   profile.Spec.Features["opscenter-features"].Chart.Version,
+			SourceRef: hub.BootstrapHelmRepository(fakeServer.FakeClient),
 		}
 
 		defaultValues, err := getDefaultValues(NewVirtualRegistry(fakeServer.FakeClient), chartRef)

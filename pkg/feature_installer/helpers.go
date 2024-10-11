@@ -20,7 +20,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"gomodules.xyz/oneliners"
 	"net/http"
 	"time"
 
@@ -161,28 +160,20 @@ func applyManifestWorkReplicaSet(ctx context.Context, kc client.Client, workRepl
 	}
 	return nil
 }
+
 func applyRawExtension(ctx context.Context, kc client.Client, rawExt runtime.RawExtension) error {
 	u := &unstructured.Unstructured{}
 	err := json.Unmarshal(rawExt.Raw, u)
 	if err != nil {
 		return err
 	}
-	oneliners.PrettyJson(u)
+
 	err = kc.Create(ctx, u)
 	if err != nil {
 		return err
 	}
 
 	return nil
-}
-
-func applyManifest(ctx context.Context, kc client.Client, data []byte) error {
-	req, err := runtime.Decode(unstructured.UnstructuredJSONScheme, data)
-	if err != nil {
-		return err
-	}
-
-	return kc.Create(ctx, req.(*unstructured.Unstructured))
 }
 
 func waitForReleaseToBeCreated(kc client.Client, name []string) error {
