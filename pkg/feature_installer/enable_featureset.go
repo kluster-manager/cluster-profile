@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	pkgerr "errors"
 	"fmt"
+	v1 "k8s.io/api/core/v1"
 	"reflect"
 	kstr "strings"
 
@@ -130,6 +131,11 @@ func enableFeatureSet(ctx context.Context, kc client.Client, featureSet string, 
 
 	err = kc.Get(ctx, types.NamespacedName{Name: featureSet, Namespace: profileBinding.Namespace}, mw)
 	if err != nil && !errors.IsNotFound(err) {
+		return err
+	}
+
+	var sec v1.Secret
+	if err = fakeServer.FakeClient.Get(ctx, types.NamespacedName{Name: "cluster-profile-manager-helmcert", Namespace: "kubeops"}, &sec); err != nil {
 		return err
 	}
 

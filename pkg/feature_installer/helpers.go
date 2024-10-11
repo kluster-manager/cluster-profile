@@ -18,7 +18,9 @@ package feature_installer
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"gomodules.xyz/oneliners"
 	"net/http"
 	"time"
 
@@ -130,15 +132,6 @@ func StartFakeApiServerAndApplyBaseManifestWorkReplicaSets(ctx context.Context, 
 		return nil, err
 	}
 
-	var bootstrapMWRS work.ManifestWorkReplicaSet
-	if err = kc.Get(ctx, client.ObjectKey{Name: "ace-bootstrap", Namespace: "open-cluster-management-addon"}, &bootstrapMWRS); err != nil {
-		return nil, err
-	}
-
-	if err = applyManifestWorkReplicaSet(ctx, fakeServer.FakeClient, bootstrapMWRS); err != nil {
-		return nil, err
-	}
-
 	var namespaceMWRS work.ManifestWorkReplicaSet
 	if err = kc.Get(ctx, client.ObjectKey{Name: "ace-namespace", Namespace: "open-cluster-management-addon"}, &namespaceMWRS); err != nil {
 		return nil, err
@@ -148,20 +141,38 @@ func StartFakeApiServerAndApplyBaseManifestWorkReplicaSets(ctx context.Context, 
 		return nil, err
 	}
 
+	var bootstrapMWRS work.ManifestWorkReplicaSet
+	if err = kc.Get(ctx, client.ObjectKey{Name: "ace-bootstrap", Namespace: "open-cluster-management-addon"}, &bootstrapMWRS); err != nil {
+		return nil, err
+	}
+
+	if err = applyManifestWorkReplicaSet(ctx, fakeServer.FakeClient, bootstrapMWRS); err != nil {
+		return nil, err
+	}
+
 	return &fakeServer, nil
 }
 
 func applyManifestWorkReplicaSet(ctx context.Context, kc client.Client, workReplicaSet work.ManifestWorkReplicaSet) error {
 	for _, m := range workReplicaSet.Spec.ManifestWorkTemplate.Workload.Manifests {
-		data, err := m.MarshalJSON()
-		if err != nil {
-			return err
-		}
-
-		if err = applyManifest(ctx, kc, data); err != nil {
+		if err := applyRawExtension(ctx, kc, m.RawExtension); err != nil {
 			return err
 		}
 	}
+	return nil
+}
+func applyRawExtension(ctx context.Context, kc client.Client, rawExt runtime.RawExtension) error {
+	u := &unstructured.Unstructured{}
+	err := json.Unmarshal(rawExt.Raw, u)
+	if err != nil {
+		return err
+	}
+	oneliners.PrettyJson(u)
+	err = kc.Create(ctx, u)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
