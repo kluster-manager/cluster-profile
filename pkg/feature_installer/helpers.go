@@ -36,7 +36,6 @@ import (
 	"k8s.io/client-go/tools/clientcmd/api"
 	"k8s.io/klog/v2"
 	cu "kmodules.xyz/client-go/client"
-	"kmodules.xyz/client-go/meta"
 	"kmodules.xyz/client-go/tools/clientcmd"
 	"kmodules.xyz/fake-apiserver/pkg"
 	uiapi "kmodules.xyz/resource-metadata/apis/ui/v1alpha1"
@@ -53,6 +52,8 @@ const (
 	pullInterval = 2 * time.Second
 	waitTimeout  = 10 * time.Minute
 
+	// addonNamespace must be hardcoded as it is also used from b3
+	addonNamespace    = "open-cluster-management-addon"
 	mwrsNameNamespace = "ace-namespace"
 	mwrsNameBootstrap = "ace-bootstrap"
 )
@@ -137,7 +138,7 @@ func StartFakeApiServerAndApplyBaseManifestWorkReplicaSets(ctx context.Context, 
 	}
 
 	var mwrsNamespace work.ManifestWorkReplicaSet
-	if err = kc.Get(ctx, client.ObjectKey{Name: mwrsNameNamespace, Namespace: meta.PodNamespace()}, &mwrsNamespace); err != nil {
+	if err = kc.Get(ctx, client.ObjectKey{Name: mwrsNameNamespace, Namespace: addonNamespace}, &mwrsNamespace); err != nil {
 		return nil, err
 	}
 
@@ -146,7 +147,7 @@ func StartFakeApiServerAndApplyBaseManifestWorkReplicaSets(ctx context.Context, 
 	}
 
 	var mwrsBootstrap work.ManifestWorkReplicaSet
-	if err = kc.Get(ctx, client.ObjectKey{Name: mwrsNameBootstrap, Namespace: meta.PodNamespace()}, &mwrsBootstrap); err != nil {
+	if err = kc.Get(ctx, client.ObjectKey{Name: mwrsNameBootstrap, Namespace: addonNamespace}, &mwrsBootstrap); err != nil {
 		return nil, err
 	}
 
