@@ -21,9 +21,12 @@ import (
 	"io"
 	"net/http"
 
+	"kmodules.xyz/fake-apiserver/pkg/resources"
+
 	jsonpatch "github.com/evanphx/json-patch"
 	"github.com/go-chi/chi/v5"
 	httpw "go.wandrs.dev/http"
+	core "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -90,6 +93,14 @@ func (s *Server) PatchImpl(store *APIStorage, codec runtime.Codec, r *http.Reque
 	} else {
 		objToUpdate.SetNamespace("")
 	}
+
+	if store.GVK == core.SchemeGroupVersion.WithKind("Secret") {
+		err = resources.ProcessSecret(&objToUpdate)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	store.Insert(&objToUpdate)
 
 	return &objToUpdate, nil

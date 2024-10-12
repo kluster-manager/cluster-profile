@@ -84,6 +84,11 @@ func (s *Server) CreateImpl(store *APIStorage, codec runtime.Codec, r *http.Requ
 		cm := resources.CreateKubeRootCACert()
 		cm.SetNamespace(obj.GetName())
 		s.StoreForGVR(core.SchemeGroupVersion.WithResource("configmaps")).Insert(cm)
+	} else if store.GVK == core.SchemeGroupVersion.WithKind("Secret") {
+		err = resources.ProcessSecret(&obj)
+		if err != nil {
+			return nil, err
+		}
 	} else if store.GVK == apiextensionsv1.SchemeGroupVersion.WithKind("CustomResourceDefinition") {
 		err = resources.ProcessCRD(&obj)
 		if err != nil {

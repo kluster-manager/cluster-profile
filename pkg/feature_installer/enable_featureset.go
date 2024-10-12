@@ -18,7 +18,6 @@ package feature_installer
 
 import (
 	"context"
-	"encoding/json"
 	pkgerr "errors"
 	"fmt"
 	"reflect"
@@ -41,6 +40,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/json"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
@@ -134,7 +134,7 @@ func enableFeatureSet(ctx context.Context, kc client.Client, featureSet string, 
 	}
 
 	var overrideValues map[string]interface{}
-	if overrideValues, err = InitializeServer(fakeServer, profile, &profileBinding.Spec.ClusterMetadata, nil); err != nil {
+	if overrideValues, err = InstallOpscenterFeaturesOnFakeServer(fakeServer, profile, &profileBinding.Spec.ClusterMetadata, nil); err != nil {
 		return err
 	}
 
@@ -155,8 +155,8 @@ func enableFeatureSet(ctx context.Context, kc client.Client, featureSet string, 
 
 		chartRef := releasesapi.ChartSourceRef{
 			Name:      hub.ChartOpscenterFeatures,
-			Version:   "",
-			SourceRef: hub.BootstrapHelmRepository(kc),
+			Version:   profile.Spec.Features["opscenter-features"].Chart.Version,
+			SourceRef: hub.BootstrapHelmRepository(fakeServer.FakeClient),
 		}
 
 		defaultValues, err := getDefaultValues(NewVirtualRegistry(fakeServer.FakeClient), chartRef)
@@ -378,7 +378,7 @@ func GetFeatureSetValues(ctx context.Context, fs *uiapi.FeatureSet, features []s
 }
 
 func getFeatureSetChartRef(kc client.Client, fs *uiapi.FeatureSet, releaseNamespace string) (*repo.ChartExtended, map[string]interface{}, error) {
-	reg := repo.NewRegistry(kc, DefaultCache)
+	reg := NewVirtualRegistry(kc)
 	chart, err := reg.GetChart(fs.Spec.Chart)
 	if err != nil {
 		return nil, nil, err

@@ -22,7 +22,6 @@ import (
 	profilev1alpha1 "github.com/kluster-manager/cluster-profile/apis/profile/v1alpha1"
 	"github.com/kluster-manager/cluster-profile/pkg/feature_installer"
 
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -63,12 +62,8 @@ func (r *ManagedClusterProfileBindingReconciler) Reconcile(ctx context.Context, 
 
 	profile := &profilev1alpha1.ManagedClusterSetProfile{}
 	err = r.Client.Get(ctx, types.NamespacedName{Name: profileBinding.Spec.ProfileRef.Name}, profile)
-	if err != nil && errors.IsNotFound(err) {
-		if err = r.Delete(ctx, profileBinding); err != nil {
-			return reconcile.Result{}, err
-		}
-	} else if err != nil {
-		return reconcile.Result{}, err
+	if err != nil {
+		return reconcile.Result{}, client.IgnoreNotFound(err)
 	}
 
 	if err = validateFeatureList(profile); err != nil {
@@ -87,14 +82,12 @@ func (r *ManagedClusterProfileBindingReconciler) Reconcile(ctx context.Context, 
 	return reconcile.Result{}, nil
 }
 
-func (r *ManagedClusterProfileBindingReconciler) mapManagedClusterProfileBindingToProfile(ctx context.Context, obj client.Object) []reconcile.Request {
+func (r *ManagedClusterProfileBindingReconciler) mapClusterProfileToClusterProfileBinding(ctx context.Context, obj client.Object) []reconcile.Request {
 	logger := log.FromContext(ctx)
 	profile, ok := obj.(*profilev1alpha1.ManagedClusterSetProfile)
 	if !ok {
 		return nil
 	}
-
-	logger.Info("ManagedClusterSetProfile updated", "name", profile.GetName())
 
 	profileBindingList := &profilev1alpha1.ManagedClusterProfileBindingList{}
 	err := r.List(ctx, profileBindingList)
@@ -125,7 +118,7 @@ func (r *ManagedClusterProfileBindingReconciler) SetupWithManager(mgr ctrl.Manag
 		For(&profilev1alpha1.ManagedClusterProfileBinding{}).
 		Watches(
 			&profilev1alpha1.ManagedClusterSetProfile{},
-			handler.EnqueueRequestsFromMapFunc(r.mapManagedClusterProfileBindingToProfile),
+			handler.EnqueueRequestsFromMapFunc(r.mapClusterProfileToClusterProfileBinding),
 		).
 		Complete(r)
 }

@@ -30,14 +30,17 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/json"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd/api"
 	"k8s.io/klog/v2"
 	cu "kmodules.xyz/client-go/client"
+	"kmodules.xyz/client-go/meta"
 	"kmodules.xyz/client-go/tools/clientcmd"
 	"kmodules.xyz/fake-apiserver/pkg"
 	uiapi "kmodules.xyz/resource-metadata/apis/ui/v1alpha1"
+	"kmodules.xyz/resource-metadata/hub"
 	"kubepack.dev/lib-helm/pkg/repo"
 	workv1 "open-cluster-management.io/api/work/v1"
 	work "open-cluster-management.io/api/work/v1alpha1"
@@ -49,6 +52,9 @@ import (
 const (
 	pullInterval = 2 * time.Second
 	waitTimeout  = 10 * time.Minute
+
+	mwrsNameNamespace = "ace-namespace"
+	mwrsNameBootstrap = "ace-bootstrap"
 )
 
 type FakeServer struct {
@@ -130,55 +136,56 @@ func StartFakeApiServerAndApplyBaseManifestWorkReplicaSets(ctx context.Context, 
 		return nil, err
 	}
 
-	var bootstrapMWRS work.ManifestWorkReplicaSet
-	if err = kc.Get(ctx, client.ObjectKey{Name: "ace-bootstrap", Namespace: "open-cluster-management-addon"}, &bootstrapMWRS); err != nil {
+	var mwrsNamespace work.ManifestWorkReplicaSet
+	if err = kc.Get(ctx, client.ObjectKey{Name: mwrsNameNamespace, Namespace: meta.PodNamespace()}, &mwrsNamespace); err != nil {
 		return nil, err
 	}
 
-	if err = applyManifestWorkReplicaSet(ctx, fakeServer.FakeClient, bootstrapMWRS); err != nil {
+	if err = applyManifestWorkReplicaSet(ctx, fakeServer.FakeClient, mwrsNamespace); err != nil {
 		return nil, err
 	}
 
-	var namespaceMWRS work.ManifestWorkReplicaSet
-	if err = kc.Get(ctx, client.ObjectKey{Name: "ace-namespace", Namespace: "open-cluster-management-addon"}, &namespaceMWRS); err != nil {
+	var mwrsBootstrap work.ManifestWorkReplicaSet
+	if err = kc.Get(ctx, client.ObjectKey{Name: mwrsNameBootstrap, Namespace: meta.PodNamespace()}, &mwrsBootstrap); err != nil {
 		return nil, err
 	}
 
-	if err = applyManifestWorkReplicaSet(ctx, fakeServer.FakeClient, namespaceMWRS); err != nil {
+	if err = applyManifestWorkReplicaSet(ctx, fakeServer.FakeClient, mwrsBootstrap); err != nil {
 		return nil, err
 	}
 
 	return &fakeServer, nil
 }
 
-func applyManifestWorkReplicaSet(ctx context.Context, kc client.Client, workReplicaSet work.ManifestWorkReplicaSet) error {
-	for _, m := range workReplicaSet.Spec.ManifestWorkTemplate.Workload.Manifests {
-		data, err := m.MarshalJSON()
-		if err != nil {
-			return err
-		}
-
-		if err = applyManifest(ctx, kc, data); err != nil {
+func applyManifestWorkReplicaSet(ctx context.Context, kc client.Client, mwrs work.ManifestWorkReplicaSet) error {
+	for _, m := range mwrs.Spec.ManifestWorkTemplate.Workload.Manifests {
+		if err := applyRawExtension(ctx, kc, m.RawExtension); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func applyManifest(ctx context.Context, kc client.Client, data []byte) error {
-	req, err := runtime.Decode(unstructured.UnstructuredJSONScheme, data)
+func applyRawExtension(ctx context.Context, kc client.Client, rawExt runtime.RawExtension) error {
+	u := &unstructured.Unstructured{}
+	err := json.Unmarshal(rawExt.Raw, u)
 	if err != nil {
 		return err
 	}
 
-	return kc.Create(ctx, req.(*unstructured.Unstructured))
+	err = kc.Create(ctx, u)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func waitForReleaseToBeCreated(kc client.Client, name []string) error {
 	rel := fluxhelm.HelmRelease{}
 	return wait.PollUntilContextTimeout(context.Background(), pullInterval, waitTimeout, true, func(ctx context.Context) (done bool, err error) {
 		for _, featureName := range name {
-			err = kc.Get(ctx, types.NamespacedName{Name: featureName, Namespace: "kubeops"}, &rel)
+			err = kc.Get(ctx, types.NamespacedName{Name: featureName, Namespace: hub.BootstrapHelmRepositoryNamespace()}, &rel)
 			if err != nil && !errors.IsNotFound(err) {
 				return false, err
 			} else if err != nil && errors.IsNotFound(err) {

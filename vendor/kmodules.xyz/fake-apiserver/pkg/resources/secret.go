@@ -14,40 +14,32 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package utils
+package resources
 
 import (
-	"bytes"
-	"encoding/gob"
-
-	"k8s.io/apimachinery/pkg/util/json"
+	core "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
-func init() {
-	gob.Register(map[string]interface{}{})
-	gob.Register([]interface{}{})
-}
-
-func DeepCopyMap(m map[string]interface{}) (map[string]interface{}, error) {
-	var buf bytes.Buffer
-	enc := gob.NewEncoder(&buf)
-	dec := gob.NewDecoder(&buf)
-	err := enc.Encode(m)
-	if err != nil {
-		return nil, err
-	}
-	var cp map[string]interface{}
-	err = dec.Decode(&cp)
-	if err != nil {
-		return nil, err
-	}
-	return cp, nil
-}
-
-func Copy(src any, dst any) error {
-	jsonByte, err := json.Marshal(src)
+func ProcessSecret(u *unstructured.Unstructured) error {
+	var obj core.Secret
+	err := runtime.DefaultUnstructuredConverter.FromUnstructured(u.UnstructuredContent(), &obj)
 	if err != nil {
 		return err
 	}
-	return json.Unmarshal(jsonByte, dst)
+
+	if len(obj.StringData) > 0 && len(obj.Data) == 0 {
+		obj.Data = map[string][]byte{}
+	}
+	for k, v := range obj.StringData {
+		obj.Data[k] = []byte(v)
+	}
+
+	result, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&obj)
+	if err != nil {
+		return err
+	}
+	u.SetUnstructuredContent(result)
+	return nil
 }

@@ -20,8 +20,11 @@ import (
 	"io"
 	"net/http"
 
+	"kmodules.xyz/fake-apiserver/pkg/resources"
+
 	"github.com/go-chi/chi/v5"
 	httpw "go.wandrs.dev/http"
+	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -63,6 +66,14 @@ func (s *Server) UpdateImpl(store *APIStorage, codec runtime.Codec, r *http.Requ
 	} else {
 		obj.SetNamespace("")
 	}
+
+	if store.GVK == core.SchemeGroupVersion.WithKind("Secret") {
+		err = resources.ProcessSecret(&obj)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	store.Insert(&obj)
 
 	return &obj, nil

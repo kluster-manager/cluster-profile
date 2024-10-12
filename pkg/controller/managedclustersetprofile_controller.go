@@ -159,8 +159,6 @@ func (r *ManagedClusterSetProfileReconciler) mapManagedClusterSetToProfile(ctx c
 		return nil
 	}
 
-	logger.Info("ManagedClusterSet updated", "name", managedClusterSet.GetName())
-
 	profileList := &profilev1alpha1.ManagedClusterSetProfileList{}
 	err := r.List(ctx, profileList)
 	if err != nil {

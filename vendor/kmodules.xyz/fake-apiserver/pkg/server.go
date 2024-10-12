@@ -283,6 +283,9 @@ func (s *Server) Run() (*http.Server, *rest.Config, error) {
 
 	cfg := rest.Config{
 		Host: fmt.Sprintf("http://127.0.0.1:%d", l.Addr().(*net.TCPAddr).Port),
+		ContentConfig: rest.ContentConfig{
+			AcceptContentTypes: runtime.ContentTypeJSON,
+		},
 	}
 	return srv, &cfg, nil
 }
