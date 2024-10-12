@@ -22,7 +22,6 @@ import (
 	profilev1alpha1 "github.com/kluster-manager/cluster-profile/apis/profile/v1alpha1"
 	"github.com/kluster-manager/cluster-profile/pkg/feature_installer"
 
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -63,12 +62,8 @@ func (r *ManagedClusterProfileBindingReconciler) Reconcile(ctx context.Context, 
 
 	profile := &profilev1alpha1.ManagedClusterSetProfile{}
 	err = r.Client.Get(ctx, types.NamespacedName{Name: profileBinding.Spec.ProfileRef.Name}, profile)
-	if err != nil && errors.IsNotFound(err) {
-		if err = r.Delete(ctx, profileBinding); err != nil {
-			return reconcile.Result{}, err
-		}
-	} else if err != nil {
-		return reconcile.Result{}, err
+	if err != nil {
+		return reconcile.Result{}, client.IgnoreNotFound(err)
 	}
 
 	if err = validateFeatureList(profile); err != nil {

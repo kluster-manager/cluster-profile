@@ -36,7 +36,7 @@ import (
 	releasesapi "x-helm.dev/apimachinery/apis/releases/v1alpha1"
 )
 
-func InitializeServer(fakeServer *FakeServer, profile *profilev1alpha1.ManagedClusterSetProfile, clusterMetadata *kmapi.ClusterInfo, chartRef *releasesapi.ChartSourceRef) (map[string]interface{}, error) {
+func InstallOpscenterFeaturesOnFakeServer(fakeServer *FakeServer, profile *profilev1alpha1.ManagedClusterSetProfile, clusterMetadata *kmapi.ClusterInfo, chartRef *releasesapi.ChartSourceRef) (map[string]interface{}, error) {
 	overrides := make(map[string]interface{})
 	if profile.Spec.Features["opscenter-features"].Chart.SourceRef.Name != "" {
 		chart := profile.Spec.Features["opscenter-features"].Chart
@@ -127,25 +127,21 @@ func installOpscenterFeatures(overrideValues []byte, fakeServer *FakeServer, cha
 }
 
 func installChart(fakeServer *FakeServer, chartRef *releasesapi.ChartSourceRef, deployOpts *action.DeployOptions) error {
-	err := applyCRDs(fakeServer.FakeRestConfig, NewVirtualRegistry(fakeServer.FakeClient), *chartRef)
+	reg := NewVirtualRegistry(fakeServer.FakeClient)
+	err := applyCRDs(fakeServer.FakeRestConfig, reg, *chartRef)
 	if err != nil {
 		return err
 	}
-	if err = DeployRelease(fakeServer.FakeApiConfig, deployOpts); err != nil {
+	if err = DeployRelease(fakeServer.FakeApiConfig, deployOpts, reg); err != nil {
 		return err
 	}
 	return err
 }
 
-func DeployRelease(apiConfig *api.Config, deployOpts *action.DeployOptions) error {
+func DeployRelease(apiConfig *api.Config, deployOpts *action.DeployOptions, reg repo.IRegistry) error {
 	konfig := clientcmd.NewNonInteractiveClientConfig(*apiConfig, apiConfig.CurrentContext, &clientcmd.ConfigOverrides{}, nil)
-
 	clientGetter, err := utils.GetClientGetter(konfig)
 	if err != nil {
-		return err
-	}
-	if err != nil {
-		fmt.Println(err)
 		return err
 	}
 	// configuration for upgrade/installer
@@ -154,12 +150,6 @@ func DeployRelease(apiConfig *api.Config, deployOpts *action.DeployOptions) erro
 	if err != nil {
 		return fmt.Errorf("helm config initialization: %v", err)
 	}
-
-	cc, err := action.NewUncachedClient(clientGetter)
-	if err != nil {
-		return fmt.Errorf("kube client initialization: %v", err)
-	}
-	reg := repo.NewRegistry(cc, DefaultCache)
 
 	deploy := action.NewDeployerForConfig(cfg).
 		WithRegistry(reg).

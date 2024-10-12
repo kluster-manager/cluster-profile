@@ -134,7 +134,7 @@ func enableFeatureSet(ctx context.Context, kc client.Client, featureSet string, 
 	}
 
 	var overrideValues map[string]interface{}
-	if overrideValues, err = InitializeServer(fakeServer, profile, &profileBinding.Spec.ClusterMetadata, nil); err != nil {
+	if overrideValues, err = InstallOpscenterFeaturesOnFakeServer(fakeServer, profile, &profileBinding.Spec.ClusterMetadata, nil); err != nil {
 		return err
 	}
 
