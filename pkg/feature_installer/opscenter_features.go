@@ -19,7 +19,6 @@ package feature_installer
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 	"time"
 
 	profilev1alpha1 "github.com/kluster-manager/cluster-profile/apis/profile/v1alpha1"
@@ -146,7 +145,7 @@ func DeployRelease(apiConfig *api.Config, deployOpts *action.DeployOptions, reg 
 	}
 	// configuration for upgrade/installer
 	cfg := new(action.Configuration)
-	err = cfg.Init(clientGetter, "kubeops", strings.ToLower("secret"))
+	err = cfg.Init(clientGetter, hub.BootstrapHelmRepositoryNamespace(), "secret")
 	if err != nil {
 		return fmt.Errorf("helm config initialization: %v", err)
 	}

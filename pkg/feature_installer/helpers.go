@@ -36,9 +36,11 @@ import (
 	"k8s.io/client-go/tools/clientcmd/api"
 	"k8s.io/klog/v2"
 	cu "kmodules.xyz/client-go/client"
+	"kmodules.xyz/client-go/meta"
 	"kmodules.xyz/client-go/tools/clientcmd"
 	"kmodules.xyz/fake-apiserver/pkg"
 	uiapi "kmodules.xyz/resource-metadata/apis/ui/v1alpha1"
+	"kmodules.xyz/resource-metadata/hub"
 	"kubepack.dev/lib-helm/pkg/repo"
 	workv1 "open-cluster-management.io/api/work/v1"
 	work "open-cluster-management.io/api/work/v1alpha1"
@@ -50,6 +52,9 @@ import (
 const (
 	pullInterval = 2 * time.Second
 	waitTimeout  = 10 * time.Minute
+
+	mwrsNamespace = "ace-namespace"
+	mwrsBootstrap = "ace-bootstrap"
 )
 
 type FakeServer struct {
@@ -132,7 +137,7 @@ func StartFakeApiServerAndApplyBaseManifestWorkReplicaSets(ctx context.Context, 
 	}
 
 	var namespaceMWRS work.ManifestWorkReplicaSet
-	if err = kc.Get(ctx, client.ObjectKey{Name: "ace-namespace", Namespace: "open-cluster-management-addon"}, &namespaceMWRS); err != nil {
+	if err = kc.Get(ctx, client.ObjectKey{Name: mwrsNamespace, Namespace: meta.PodNamespace()}, &namespaceMWRS); err != nil {
 		return nil, err
 	}
 
@@ -141,7 +146,7 @@ func StartFakeApiServerAndApplyBaseManifestWorkReplicaSets(ctx context.Context, 
 	}
 
 	var bootstrapMWRS work.ManifestWorkReplicaSet
-	if err = kc.Get(ctx, client.ObjectKey{Name: "ace-bootstrap", Namespace: "open-cluster-management-addon"}, &bootstrapMWRS); err != nil {
+	if err = kc.Get(ctx, client.ObjectKey{Name: mwrsBootstrap, Namespace: meta.PodNamespace()}, &bootstrapMWRS); err != nil {
 		return nil, err
 	}
 
@@ -180,7 +185,7 @@ func waitForReleaseToBeCreated(kc client.Client, name []string) error {
 	rel := fluxhelm.HelmRelease{}
 	return wait.PollUntilContextTimeout(context.Background(), pullInterval, waitTimeout, true, func(ctx context.Context) (done bool, err error) {
 		for _, featureName := range name {
-			err = kc.Get(ctx, types.NamespacedName{Name: featureName, Namespace: "kubeops"}, &rel)
+			err = kc.Get(ctx, types.NamespacedName{Name: featureName, Namespace: hub.BootstrapHelmRepositoryNamespace()}, &rel)
 			if err != nil && !errors.IsNotFound(err) {
 				return false, err
 			} else if err != nil && errors.IsNotFound(err) {

@@ -378,7 +378,7 @@ func GetFeatureSetValues(ctx context.Context, fs *uiapi.FeatureSet, features []s
 }
 
 func getFeatureSetChartRef(kc client.Client, fs *uiapi.FeatureSet, releaseNamespace string) (*repo.ChartExtended, map[string]interface{}, error) {
-	reg := repo.NewRegistry(kc, DefaultCache)
+	reg := NewVirtualRegistry(kc)
 	chart, err := reg.GetChart(fs.Spec.Chart)
 	if err != nil {
 		return nil, nil, err

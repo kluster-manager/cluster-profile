@@ -82,14 +82,12 @@ func (r *ManagedClusterProfileBindingReconciler) Reconcile(ctx context.Context, 
 	return reconcile.Result{}, nil
 }
 
-func (r *ManagedClusterProfileBindingReconciler) mapManagedClusterProfileBindingToProfile(ctx context.Context, obj client.Object) []reconcile.Request {
+func (r *ManagedClusterProfileBindingReconciler) mapClusterProfileToClusterProfileBinding(ctx context.Context, obj client.Object) []reconcile.Request {
 	logger := log.FromContext(ctx)
 	profile, ok := obj.(*profilev1alpha1.ManagedClusterSetProfile)
 	if !ok {
 		return nil
 	}
-
-	logger.Info("ManagedClusterSetProfile updated", "name", profile.GetName())
 
 	profileBindingList := &profilev1alpha1.ManagedClusterProfileBindingList{}
 	err := r.List(ctx, profileBindingList)
@@ -120,7 +118,7 @@ func (r *ManagedClusterProfileBindingReconciler) SetupWithManager(mgr ctrl.Manag
 		For(&profilev1alpha1.ManagedClusterProfileBinding{}).
 		Watches(
 			&profilev1alpha1.ManagedClusterSetProfile{},
-			handler.EnqueueRequestsFromMapFunc(r.mapManagedClusterProfileBindingToProfile),
+			handler.EnqueueRequestsFromMapFunc(r.mapClusterProfileToClusterProfileBinding),
 		).
 		Complete(r)
 }
