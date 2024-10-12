@@ -19,7 +19,8 @@ package utils
 import (
 	"bytes"
 	"encoding/gob"
-	"encoding/json"
+
+	"k8s.io/apimachinery/pkg/util/json"
 )
 
 func init() {

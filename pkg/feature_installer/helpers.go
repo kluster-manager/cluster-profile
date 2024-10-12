@@ -18,7 +18,6 @@ package feature_installer
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
@@ -31,6 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/json"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd/api"
@@ -53,8 +53,8 @@ const (
 	pullInterval = 2 * time.Second
 	waitTimeout  = 10 * time.Minute
 
-	mwrsNamespace = "ace-namespace"
-	mwrsBootstrap = "ace-bootstrap"
+	mwrsNameNamespace = "ace-namespace"
+	mwrsNameBootstrap = "ace-bootstrap"
 )
 
 type FakeServer struct {
@@ -136,29 +136,29 @@ func StartFakeApiServerAndApplyBaseManifestWorkReplicaSets(ctx context.Context, 
 		return nil, err
 	}
 
-	var namespaceMWRS work.ManifestWorkReplicaSet
-	if err = kc.Get(ctx, client.ObjectKey{Name: mwrsNamespace, Namespace: meta.PodNamespace()}, &namespaceMWRS); err != nil {
+	var mwrsNamespace work.ManifestWorkReplicaSet
+	if err = kc.Get(ctx, client.ObjectKey{Name: mwrsNameNamespace, Namespace: meta.PodNamespace()}, &mwrsNamespace); err != nil {
 		return nil, err
 	}
 
-	if err = applyManifestWorkReplicaSet(ctx, fakeServer.FakeClient, namespaceMWRS); err != nil {
+	if err = applyManifestWorkReplicaSet(ctx, fakeServer.FakeClient, mwrsNamespace); err != nil {
 		return nil, err
 	}
 
-	var bootstrapMWRS work.ManifestWorkReplicaSet
-	if err = kc.Get(ctx, client.ObjectKey{Name: mwrsBootstrap, Namespace: meta.PodNamespace()}, &bootstrapMWRS); err != nil {
+	var mwrsBootstrap work.ManifestWorkReplicaSet
+	if err = kc.Get(ctx, client.ObjectKey{Name: mwrsNameBootstrap, Namespace: meta.PodNamespace()}, &mwrsBootstrap); err != nil {
 		return nil, err
 	}
 
-	if err = applyManifestWorkReplicaSet(ctx, fakeServer.FakeClient, bootstrapMWRS); err != nil {
+	if err = applyManifestWorkReplicaSet(ctx, fakeServer.FakeClient, mwrsBootstrap); err != nil {
 		return nil, err
 	}
 
 	return &fakeServer, nil
 }
 
-func applyManifestWorkReplicaSet(ctx context.Context, kc client.Client, workReplicaSet work.ManifestWorkReplicaSet) error {
-	for _, m := range workReplicaSet.Spec.ManifestWorkTemplate.Workload.Manifests {
+func applyManifestWorkReplicaSet(ctx context.Context, kc client.Client, mwrs work.ManifestWorkReplicaSet) error {
+	for _, m := range mwrs.Spec.ManifestWorkTemplate.Workload.Manifests {
 		if err := applyRawExtension(ctx, kc, m.RawExtension); err != nil {
 			return err
 		}

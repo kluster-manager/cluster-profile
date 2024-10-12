@@ -17,7 +17,6 @@ limitations under the License.
 package feature_installer
 
 import (
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -25,6 +24,7 @@ import (
 	"github.com/kluster-manager/cluster-profile/pkg/utils"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/util/json"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
 	kmapi "kmodules.xyz/client-go/api/v1"

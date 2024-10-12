@@ -18,7 +18,6 @@ package feature_installer
 
 import (
 	"context"
-	"encoding/json"
 	"log"
 	"time"
 
@@ -27,6 +26,7 @@ import (
 	fluxhelm "github.com/fluxcd/helm-controller/api/v2"
 	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/json"
 	cu "kmodules.xyz/client-go/client"
 	uiapi "kmodules.xyz/resource-metadata/apis/ui/v1alpha1"
 	"kmodules.xyz/resource-metadata/hub"
