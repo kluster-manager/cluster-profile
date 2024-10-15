@@ -24,7 +24,7 @@ require (
 	k8s.io/utils v0.0.0-20240711033017-18e509b52bc8
 	kmodules.xyz/client-go v0.30.27
 	kmodules.xyz/fake-apiserver v0.0.4
-	kmodules.xyz/resource-metadata v0.19.0
+	kmodules.xyz/resource-metadata v0.19.1-0.20241016073336-1307639922b4
 	kubepack.dev/lib-app v0.0.23-0.20241009153800-31c7b82c96b3
 	kubepack.dev/lib-helm v0.29.12
 	open-cluster-management.io/api v0.14.0
