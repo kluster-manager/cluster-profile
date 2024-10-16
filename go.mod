@@ -22,11 +22,11 @@ require (
 	k8s.io/kube-openapi v0.0.0-20240726031636-6f6746feab9c
 	k8s.io/kubectl v0.30.1
 	k8s.io/utils v0.0.0-20240711033017-18e509b52bc8
-	kmodules.xyz/client-go v0.30.27
+	kmodules.xyz/client-go v0.30.28
 	kmodules.xyz/fake-apiserver v0.0.4
-	kmodules.xyz/resource-metadata v0.19.1-0.20241016073336-1307639922b4
-	kubepack.dev/lib-app v0.0.23-0.20241009153800-31c7b82c96b3
-	kubepack.dev/lib-helm v0.29.12
+	kmodules.xyz/resource-metadata v0.20.0
+	kubepack.dev/lib-app v0.1.0
+	kubepack.dev/lib-helm v0.29.13
 	open-cluster-management.io/api v0.14.0
 	open-cluster-management.io/sdk-go v0.14.0
 	sigs.k8s.io/controller-runtime v0.18.4
