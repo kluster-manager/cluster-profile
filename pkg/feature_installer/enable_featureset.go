@@ -82,6 +82,14 @@ func EnableFeatures(ctx context.Context, kc client.Client, profileBinding *profi
 
 	var err error
 	for fset, featureList := range featureInfo {
+		// profileBinding.Namespace == managed cluster name
+		if fset != "opscenter-core" {
+			featureList, err = sanitizeFeatures(kc, profileBinding.Namespace, featureList)
+			if err != nil {
+				return err
+			}
+		}
+
 		if err = enableFeatureSet(ctx, kc, fset, featureList, profile, profileBinding); err != nil {
 			return err
 		}

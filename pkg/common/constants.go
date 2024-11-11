@@ -20,4 +20,5 @@ const (
 	ClusterClaimClusterInfo = "cluster.ace.info"
 	LabelAceFeatureSet      = "featureset.appscode.com/managed"
 	ProfileLabel            = "profile.appscode.com/name"
+	FeatureClusterClaim     = "features.appscode.com"
 )

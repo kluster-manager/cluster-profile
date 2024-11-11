@@ -18,13 +18,16 @@ package feature_installer
 
 import (
 	"context"
+	pkgerr "errors"
 	"fmt"
 	"net/http"
 	"time"
 
+	"github.com/kluster-manager/cluster-profile/pkg/common"
 	"github.com/kluster-manager/cluster-profile/pkg/utils"
 
 	fluxhelm "github.com/fluxcd/helm-controller/api/v2"
+	"gomodules.xyz/x/strings"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -41,10 +44,12 @@ import (
 	uiapi "kmodules.xyz/resource-metadata/apis/ui/v1alpha1"
 	"kmodules.xyz/resource-metadata/hub"
 	"kubepack.dev/lib-helm/pkg/repo"
+	v1 "open-cluster-management.io/api/cluster/v1"
 	workv1 "open-cluster-management.io/api/work/v1"
 	work "open-cluster-management.io/api/work/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/yaml"
 	releasesapi "x-helm.dev/apimachinery/apis/releases/v1alpha1"
 )
 
@@ -305,4 +310,77 @@ func getKindAndName(item map[string]interface{}) (string, string, error) {
 		return "", "", err
 	}
 	return kind, name, nil
+}
+
+func sanitizeFeatures(kc client.Client, clusterName string, features []string) ([]string, error) {
+	var mc v1.ManagedCluster
+	if err := kc.Get(context.Background(), client.ObjectKey{Name: clusterName}, &mc); err != nil {
+		return nil, err
+	}
+
+	featuresMap, err := getFeatureStatus(mc)
+	if err != nil {
+		return nil, err
+	}
+
+	featureExclusionTracker := make(map[string]bool)    // Tracks if an exclusion group already has an enabled feature
+	exclusionGroupFeatures := make(map[string][]string) // Tracks features by their exclusion group
+
+	var featureList uiapi.FeatureList
+	if err = kc.List(context.Background(), &featureList); err != nil {
+		return nil, err
+	}
+	for _, f := range featureList.Items {
+		exclusionGroup := f.Spec.FeatureExclusionGroup
+		if exclusionGroup != "" {
+			// Mark the exclusion group as having an enabled feature if this feature is enabled
+			if strings.Contains(featuresMap["enabledFeatures"], f.Name) {
+				featureExclusionTracker[exclusionGroup] = true
+				exclusionGroupFeatures[exclusionGroup] = append(exclusionGroupFeatures[exclusionGroup], f.Name)
+			}
+		}
+	}
+
+	var sanitizedFeatures []string
+	for _, f := range features {
+		var feature uiapi.Feature
+		if err := kc.Get(context.Background(), types.NamespacedName{Name: f}, &feature); err != nil {
+			return nil, err
+		}
+
+		exclusionGroup := feature.Spec.FeatureExclusionGroup
+		// Skip if an exclusion group already has an enabled feature or features are already present
+		if exclusionGroup != "" {
+			if featureExclusionTracker[exclusionGroup] || len(exclusionGroupFeatures[exclusionGroup]) > 0 {
+				continue
+			}
+		}
+
+		if strings.Contains(featuresMap["notManagedFeatures"], f) || strings.Contains(featuresMap["disabledFeatures"], f) {
+			continue
+		}
+
+		// Add the feature to the final list
+		sanitizedFeatures = append(sanitizedFeatures, f)
+		if exclusionGroup != "" {
+			exclusionGroupFeatures[exclusionGroup] = append(exclusionGroupFeatures[exclusionGroup], feature.Name)
+		}
+	}
+
+	return sanitizedFeatures, nil
+}
+
+func getFeatureStatus(cluster v1.ManagedCluster) (map[string][]string, error) {
+	mp := make(map[string][]string)
+	for _, claim := range cluster.Status.ClusterClaims {
+		if claim.Name == common.FeatureClusterClaim {
+			yamlData := []byte(claim.Value)
+			if err := yaml.Unmarshal(yamlData, &mp); err != nil {
+				return nil, err
+			}
+			return mp, nil
+		}
+	}
+
+	return nil, pkgerr.New("features cluster claim not found")
 }
