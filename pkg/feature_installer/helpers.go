@@ -20,10 +20,10 @@ import (
 	"context"
 	pkgerr "errors"
 	"fmt"
+	kmapi "kmodules.xyz/client-go/api/v1"
 	"net/http"
 	"time"
 
-	"github.com/kluster-manager/cluster-profile/pkg/common"
 	"github.com/kluster-manager/cluster-profile/pkg/utils"
 
 	fluxhelm "github.com/fluxcd/helm-controller/api/v2"
@@ -334,7 +334,7 @@ func sanitizeFeatures(kc client.Client, clusterName string, features []string) (
 		exclusionGroup := f.Spec.FeatureExclusionGroup
 		if exclusionGroup != "" {
 			// Mark the exclusion group as having an enabled feature if this feature is enabled
-			if strings.Contains(featuresMap["enabledFeatures"], f.Name) {
+			if strings.Contains(featuresMap.EnabledFeatures, f.Name) {
 				featureExclusionTracker[exclusionGroup] = true
 				exclusionGroupFeatures[exclusionGroup] = append(exclusionGroupFeatures[exclusionGroup], f.Name)
 			}
@@ -356,7 +356,7 @@ func sanitizeFeatures(kc client.Client, clusterName string, features []string) (
 			}
 		}
 
-		if strings.Contains(featuresMap["notManagedFeatures"], f) || strings.Contains(featuresMap["disabledFeatures"], f) {
+		if strings.Contains(featuresMap.ExternallyManagedFeatures, f) || strings.Contains(featuresMap.DisabledFeatures, f) {
 			continue
 		}
 
@@ -370,15 +370,15 @@ func sanitizeFeatures(kc client.Client, clusterName string, features []string) (
 	return sanitizedFeatures, nil
 }
 
-func getFeatureStatus(cluster v1.ManagedCluster) (map[string][]string, error) {
-	mp := make(map[string][]string)
+func getFeatureStatus(cluster v1.ManagedCluster) (*kmapi.ClusterClaimFeatures, error) {
+	var mp kmapi.ClusterClaimFeatures
 	for _, claim := range cluster.Status.ClusterClaims {
-		if claim.Name == common.FeatureClusterClaim {
+		if claim.Name == kmapi.ClusterClaimKeyFeatures {
 			yamlData := []byte(claim.Value)
 			if err := yaml.Unmarshal(yamlData, &mp); err != nil {
 				return nil, err
 			}
-			return mp, nil
+			return &mp, nil
 		}
 	}
 
