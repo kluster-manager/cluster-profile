@@ -29,6 +29,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
+	uiapi "kmodules.xyz/resource-metadata/apis/ui/v1alpha1"
 	clusterv1 "open-cluster-management.io/api/cluster/v1"
 	clusterv1beta2 "open-cluster-management.io/api/cluster/v1beta2"
 	workv1 "open-cluster-management.io/api/work/v1"
@@ -53,6 +54,7 @@ func init() {
 	utilruntime.Must(clusterv1beta2.Install(scheme))
 	utilruntime.Must(workv1.Install(scheme))
 	utilruntime.Must(workv1alpha1.Install(scheme))
+	utilruntime.Must(uiapi.AddToScheme(scheme))
 }
 
 func NewCmdManager() *cobra.Command {
