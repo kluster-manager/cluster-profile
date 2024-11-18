@@ -20,7 +20,6 @@ import (
 	"context"
 	pkgerr "errors"
 	"fmt"
-	kmapi "kmodules.xyz/client-go/api/v1"
 	"net/http"
 	"time"
 
@@ -38,6 +37,7 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd/api"
 	"k8s.io/klog/v2"
+	kmapi "kmodules.xyz/client-go/api/v1"
 	cu "kmodules.xyz/client-go/client"
 	"kmodules.xyz/client-go/tools/clientcmd"
 	"kmodules.xyz/fake-apiserver/pkg"

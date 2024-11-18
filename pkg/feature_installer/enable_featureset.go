@@ -81,13 +81,18 @@ func EnableFeatures(ctx context.Context, kc client.Client, profileBinding *profi
 	logger.Info(fmt.Sprintf("Profile: %s, ProfileBinding: %s, FeatureSetInfo: %+v", profile.Name, profileBinding.Name, featureInfo))
 
 	var err error
+	if err = enableFeatureSet(ctx, kc, "opscenter-core", featureInfo["opscenter-core"], profile, profileBinding); err != nil {
+		return err
+	}
 	for fset, featureList := range featureInfo {
+		if fset == "opscenter-core" {
+			continue
+		}
+
 		// profileBinding.Namespace == managed cluster name
-		if fset != "opscenter-core" {
-			featureList, err = sanitizeFeatures(kc, profileBinding.Namespace, featureList)
-			if err != nil {
-				return err
-			}
+		featureList, err = sanitizeFeatures(kc, profileBinding.Namespace, featureList)
+		if err != nil {
+			return err
 		}
 
 		if err = enableFeatureSet(ctx, kc, fset, featureList, profile, profileBinding); err != nil {
