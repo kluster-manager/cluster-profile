@@ -248,7 +248,7 @@ func updateManifestWork(ctx context.Context, fakeServer *FakeServer, kc client.C
 	return nil
 }
 
-func UpdateFeatureSetValues(ctx context.Context, fs string, kc client.Client, values map[string]any) ([]string, error) {
+func UpdateFeatureSetValues(ctx context.Context, fs string, kc client.Client, values map[string]any, mc *v1.ManagedCluster) ([]string, error) {
 	featureList, err := GetFeatures(ctx, kc, fs)
 	if err != nil {
 		return nil, err
@@ -261,7 +261,7 @@ func UpdateFeatureSetValues(ctx context.Context, fs string, kc client.Client, va
 			return nil, err
 		} else if ok {
 			features = append(features, feature.Name)
-			if err = updateHelmReleaseDependency(ctx, kc, values, &feature); err != nil {
+			if err = updateHelmReleaseDependency(ctx, kc, values, &feature, mc); err != nil {
 				return nil, err
 			}
 		}
@@ -318,7 +318,7 @@ func sanitizeFeatures(kc client.Client, clusterName string, features []string) (
 		return nil, err
 	}
 
-	featuresMap, err := getFeatureStatus(mc)
+	featuresMap, err := getFeatureStatus(&mc)
 	if err != nil {
 		return nil, err
 	}
@@ -370,7 +370,7 @@ func sanitizeFeatures(kc client.Client, clusterName string, features []string) (
 	return sanitizedFeatures, nil
 }
 
-func getFeatureStatus(cluster v1.ManagedCluster) (*kmapi.ClusterClaimFeatures, error) {
+func getFeatureStatus(cluster *v1.ManagedCluster) (*kmapi.ClusterClaimFeatures, error) {
 	var mp kmapi.ClusterClaimFeatures
 	for _, claim := range cluster.Status.ClusterClaims {
 		if claim.Name == kmapi.ClusterClaimKeyFeatures {
