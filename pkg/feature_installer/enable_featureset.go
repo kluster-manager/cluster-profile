@@ -56,6 +56,7 @@ import (
 	"kubepack.dev/lib-app/pkg/handler"
 	"kubepack.dev/lib-helm/pkg/repo"
 	"kubepack.dev/lib-helm/pkg/values"
+	v1 "open-cluster-management.io/api/cluster/v1"
 	workv1 "open-cluster-management.io/api/work/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
@@ -119,6 +120,11 @@ func enableFeatureSet(ctx context.Context, kc client.Client, featureSet string, 
 
 	logger := klog.FromContext(ctx)
 	logger.Info(fmt.Sprintf("Profile: %s,  ProfileBinding: %s, FeatureSet: %s, Features: %+v", profile.Name, profileBinding.Name, featureSet, features))
+
+	var mc v1.ManagedCluster
+	if err := kc.Get(context.Background(), client.ObjectKey{Name: profileBinding.Namespace}, &mc); err != nil {
+		return err
+	}
 
 	// <<<<<<<<       start fake-apiserver and apply base manifestWorkReplicaSet, feature-namespace manifestWork and helm install 'opscenter-features' chart       >>>>>>>
 	var err error
@@ -186,24 +192,24 @@ func enableFeatureSet(ctx context.Context, kc client.Client, featureSet string, 
 			return err
 		}
 
-		return applyFeatureSet(ctx, kc, mw, fakeServer, featureSet, []string{"kube-ui-server"}, profile)
+		return applyFeatureSet(ctx, kc, mw, fakeServer, featureSet, []string{"kube-ui-server"}, profile, &mc)
 	}
-	return applyFeatureSet(ctx, kc, mw, fakeServer, featureSet, features, profile)
+	return applyFeatureSet(ctx, kc, mw, fakeServer, featureSet, features, profile, &mc)
 }
 
-func applyFeatureSet(ctx context.Context, kc client.Client, mw *workv1.ManifestWork, fakeServer *FakeServer, featureSet string, features []string, profile *profilev1alpha1.ManagedClusterSetProfile) error {
+func applyFeatureSet(ctx context.Context, kc client.Client, mw *workv1.ManifestWork, fakeServer *FakeServer, featureSet string, features []string, profile *profilev1alpha1.ManagedClusterSetProfile, mc *v1.ManagedCluster) error {
 	logger := klog.FromContext(ctx)
 	var err error
 	var fsObj uiapi.FeatureSet
 	if err = fakeServer.FakeClient.Get(ctx, types.NamespacedName{Name: featureSet}, &fsObj); err != nil {
 		return err
 	}
-	model, err := GetFeatureSetValues(ctx, &fsObj, features, hub.BootstrapHelmRepositoryNamespace(), fakeServer.FakeClient)
+	model, err := GetFeatureSetValues(ctx, &fsObj, features, hub.BootstrapHelmRepositoryNamespace(), fakeServer.FakeClient, mc)
 	if err != nil {
 		return err
 	}
 
-	if _, err = UpdateFeatureSetValues(ctx, fsObj.Name, fakeServer.FakeClient, model); err != nil {
+	if _, err = UpdateFeatureSetValues(ctx, fsObj.Name, fakeServer.FakeClient, model, mc); err != nil {
 		return err
 	}
 
@@ -363,7 +369,7 @@ func applyCRDs(restConfig *rest.Config, reg repo.IRegistry, chartRef releasesapi
 	return nil
 }
 
-func GetFeatureSetValues(ctx context.Context, fs *uiapi.FeatureSet, features []string, releaseNamespace string, kc client.Client) (map[string]interface{}, error) {
+func GetFeatureSetValues(ctx context.Context, fs *uiapi.FeatureSet, features []string, releaseNamespace string, kc client.Client, mc *v1.ManagedCluster) (map[string]interface{}, error) {
 	chart, curValues, err := getFeatureSetChartRef(kc, fs, releaseNamespace)
 	if err != nil {
 		return nil, err
@@ -383,7 +389,7 @@ func GetFeatureSetValues(ctx context.Context, fs *uiapi.FeatureSet, features []s
 			continue
 		}
 
-		if err = generateHelmReleaseForFeature(kc, fs, feature, chart, curValues); err != nil {
+		if err = generateHelmReleaseForFeature(kc, fs, feature, chart, curValues, mc); err != nil {
 			return nil, err
 		}
 	}
@@ -505,7 +511,7 @@ func ignoreNotFoundError(err error) error {
 	return err
 }
 
-func generateHelmReleaseForFeature(kc client.Client, fs *uiapi.FeatureSet, feature *uiapi.Feature, chart *repo.ChartExtended, curValues map[string]interface{}) error {
+func generateHelmReleaseForFeature(kc client.Client, fs *uiapi.FeatureSet, feature *uiapi.Feature, chart *repo.ChartExtended, curValues map[string]interface{}, mc *v1.ManagedCluster) error {
 	featureKey := getFeaturePathInValues(feature.Name)
 	featureDefaultValue, _, err := unstructured.NestedMap(chart.Values, "resources", featureKey)
 	if err != nil {
@@ -525,7 +531,7 @@ func generateHelmReleaseForFeature(kc client.Client, fs *uiapi.FeatureSet, featu
 		return err
 	}
 
-	return updateHelmReleaseDependency(context.Background(), kc, curValues, feature)
+	return updateHelmReleaseDependency(context.Background(), kc, curValues, feature, mc)
 }
 
 func getFeaturePathInValues(feature string) string {
@@ -541,7 +547,15 @@ func setLabelsToHelmReleases(fs *uiapi.FeatureSet, feature *uiapi.Feature, value
 	return unstructured.SetNestedField(values, label, "resources", featureKey, "metadata", "labels")
 }
 
-func updateHelmReleaseDependency(ctx context.Context, kc client.Client, values map[string]any, feature *uiapi.Feature) (err error) {
+func updateHelmReleaseDependency(ctx context.Context, kc client.Client, values map[string]any, feature *uiapi.Feature, mc *v1.ManagedCluster) (err error) {
+	var featureMap *kmapi.ClusterClaimFeatures
+	if feature.Spec.FeatureSet != "opscenter-core" {
+		featureMap, err = getFeatureStatus(mc)
+		if err != nil {
+			return err
+		}
+	}
+
 	featureKey := getFeaturePathInValues(feature.Name)
 	if len(feature.Spec.Requirements.Features) > 0 {
 		dependsOn := make([]kmapi.ObjectReference, 0, len(feature.Spec.Requirements.Features))
@@ -556,14 +570,8 @@ func updateHelmReleaseDependency(ctx context.Context, kc client.Client, values m
 				continue
 			}
 
-			// if required feature enabled but not managed by UI
-			// don't add this feature in HelmRelease dependsOn field
-			status, err := calculateFeatureStatus(ctx, kc, &reqFeature)
-			if err != nil {
-				return err
-			}
-
-			if !status.enabled || status.managed {
+			if featureMap != nil && !strings.Contains(featureMap.DisabledFeatures, reqFeature.Name) &&
+				!strings.Contains(featureMap.ExternallyManagedFeatures, reqFeature.Name) {
 				dependsOn = append(dependsOn, kmapi.ObjectReference{
 					Name: reqFeature.Name,
 				})
