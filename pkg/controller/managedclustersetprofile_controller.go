@@ -18,16 +18,13 @@ package controller
 
 import (
 	"context"
-	"fmt"
 
 	profilev1alpha1 "github.com/kluster-manager/cluster-profile/apis/profile/v1alpha1"
 	"github.com/kluster-manager/cluster-profile/pkg/common"
 
-	"gomodules.xyz/x/strings"
 	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	cu "kmodules.xyz/client-go/client"
@@ -91,30 +88,6 @@ func (r *ManagedClusterSetProfileReconciler) Reconcile(ctx context.Context, req 
 		return reconcile.Result{}, err
 	}
 
-	label := map[string]string{
-		common.ProfileLabel: profile.Name,
-	}
-	profileBindingList := &profilev1alpha1.ManagedClusterProfileBindingList{}
-	err = r.List(ctx, profileBindingList, client.MatchingLabelsSelector{
-		Selector: labels.SelectorFromSet(label),
-	})
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
-	clusterNameList := make([]string, 0)
-	for _, cluster := range clusters.Items {
-		clusterNameList = append(clusterNameList, cluster.Name)
-	}
-
-	for _, pb := range profileBindingList.Items {
-		if !strings.Contains(clusterNameList, pb.Namespace) {
-			if err = r.Delete(ctx, &pb); err != nil {
-				return reconcile.Result{}, err
-			}
-		}
-	}
-
 	// create ManagedClusterProfileBinding for every cluster of this clusterSet
 	for _, cluster := range clusters.Items {
 		clusterMetadata, err := GetClusterMetadata(cluster)
@@ -124,7 +97,7 @@ func (r *ManagedClusterSetProfileReconciler) Reconcile(ctx context.Context, req 
 
 		profileBinding := &profilev1alpha1.ManagedClusterProfileBinding{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      fmt.Sprintf("%s-%s", profile.Name, cluster.Name),
+				Name:      cluster.Name,
 				Namespace: cluster.Name,
 				Labels: map[string]string{
 					common.ProfileLabel: profile.Name,
@@ -139,8 +112,22 @@ func (r *ManagedClusterSetProfileReconciler) Reconcile(ctx context.Context, req 
 			},
 		}
 
+		var profileBindingList profilev1alpha1.ManagedClusterProfileBindingList
+		err = r.Client.List(ctx, &profileBindingList, &client.ListOptions{
+			Namespace: cluster.Name,
+		})
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+
+		if len(profileBindingList.Items) > 0 {
+			profileBinding.Name = profileBindingList.Items[0].Name
+		}
+
 		_, err = cu.CreateOrPatch(context.Background(), r.Client, profileBinding, func(obj client.Object, createOp bool) client.Object {
 			in := obj.(*profilev1alpha1.ManagedClusterProfileBinding)
+			in.Labels = profileBinding.Labels
+			in.OwnerReferences = profileBinding.OwnerReferences
 			in.Spec = profileBinding.Spec
 			return in
 		})
