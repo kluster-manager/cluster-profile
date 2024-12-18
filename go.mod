@@ -22,9 +22,9 @@ require (
 	k8s.io/kube-openapi v0.0.0-20240726031636-6f6746feab9c
 	k8s.io/kubectl v0.30.1
 	k8s.io/utils v0.0.0-20240711033017-18e509b52bc8
-	kmodules.xyz/client-go v0.30.38
+	kmodules.xyz/client-go v0.30.42
 	kmodules.xyz/fake-apiserver v0.0.4
-	kmodules.xyz/resource-metadata v0.22.3
+	kmodules.xyz/resource-metadata v0.23.2-0.20241218040701-e6c4dba942ca
 	kubepack.dev/lib-app v0.1.0
 	kubepack.dev/lib-helm v0.29.13
 	open-cluster-management.io/api v0.14.0
@@ -228,14 +228,14 @@ require (
 	go.uber.org/zap v1.27.0 // indirect
 	go.wandrs.dev/http v0.0.3 // indirect
 	gocloud.dev v0.37.0 // indirect
-	golang.org/x/crypto v0.27.0 // indirect
+	golang.org/x/crypto v0.31.0 // indirect
 	golang.org/x/exp v0.0.0-20240506185415-9bf2ced13842 // indirect
 	golang.org/x/net v0.29.0 // indirect
 	golang.org/x/oauth2 v0.22.0 // indirect
-	golang.org/x/sync v0.8.0 // indirect
-	golang.org/x/sys v0.25.0 // indirect
-	golang.org/x/term v0.24.0 // indirect
-	golang.org/x/text v0.18.0 // indirect
+	golang.org/x/sync v0.10.0 // indirect
+	golang.org/x/sys v0.28.0 // indirect
+	golang.org/x/term v0.27.0 // indirect
+	golang.org/x/text v0.21.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
 	golang.org/x/xerrors v0.0.0-20231012003039-104605ab7028 // indirect
 	gomodules.xyz/blobfs v0.1.14 // indirect
