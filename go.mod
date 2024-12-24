@@ -24,7 +24,7 @@ require (
 	k8s.io/utils v0.0.0-20240711033017-18e509b52bc8
 	kmodules.xyz/client-go v0.30.42
 	kmodules.xyz/fake-apiserver v0.0.4
-	kmodules.xyz/resource-metadata v0.23.2-0.20241218040701-e6c4dba942ca
+	kmodules.xyz/resource-metadata v0.23.3
 	kubepack.dev/lib-app v0.1.0
 	kubepack.dev/lib-helm v0.29.13
 	open-cluster-management.io/api v0.14.0
@@ -230,7 +230,7 @@ require (
 	gocloud.dev v0.37.0 // indirect
 	golang.org/x/crypto v0.31.0 // indirect
 	golang.org/x/exp v0.0.0-20240506185415-9bf2ced13842 // indirect
-	golang.org/x/net v0.29.0 // indirect
+	golang.org/x/net v0.33.0 // indirect
 	golang.org/x/oauth2 v0.22.0 // indirect
 	golang.org/x/sync v0.10.0 // indirect
 	golang.org/x/sys v0.28.0 // indirect
