@@ -9,7 +9,7 @@ require (
 	github.com/fluxcd/source-controller/api v1.3.0
 	github.com/google/gofuzz v1.2.0
 	github.com/spf13/cobra v1.8.1
-	go.bytebuilders.dev/license-verifier v0.14.2
+	go.bytebuilders.dev/license-verifier v0.14.4
 	gomodules.xyz/logs v0.0.7
 	gomodules.xyz/x v0.0.17
 	helm.sh/helm/v3 v3.15.0
@@ -22,9 +22,9 @@ require (
 	k8s.io/kube-openapi v0.0.0-20240726031636-6f6746feab9c
 	k8s.io/kubectl v0.30.1
 	k8s.io/utils v0.0.0-20240711033017-18e509b52bc8
-	kmodules.xyz/client-go v0.30.42
+	kmodules.xyz/client-go v0.30.44
 	kmodules.xyz/fake-apiserver v0.0.4
-	kmodules.xyz/resource-metadata v0.23.3
+	kmodules.xyz/resource-metadata v0.24.2
 	kubepack.dev/lib-app v0.1.0
 	kubepack.dev/lib-helm v0.29.13
 	open-cluster-management.io/api v0.14.0

@@ -46,6 +46,8 @@ spec:
                         - capa
                         - capg
                         - capz
+                        - caph
+                        - capk
                         type: string
                     required:
                     - clusterName
