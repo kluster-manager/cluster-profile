@@ -67,6 +67,73 @@ spec:
                 - name
                 - uid
                 type: object
+              features:
+                additionalProperties:
+                  properties:
+                    chart:
+                      properties:
+                        createNamespace:
+                          type: boolean
+                        name:
+                          type: string
+                        namespace:
+                          type: string
+                        sourceRef:
+                          properties:
+                            apiGroup:
+                              type: string
+                            kind:
+                              type: string
+                            name:
+                              type: string
+                            namespace:
+                              type: string
+                          required:
+                          - name
+                          type: object
+                        valuesFiles:
+                          items:
+                            type: string
+                          type: array
+                        version:
+                          type: string
+                      required:
+                      - name
+                      - sourceRef
+                      type: object
+                    featureSet:
+                      type: string
+                    values:
+                      x-kubernetes-preserve-unknown-fields: true
+                    valuesFrom:
+                      items:
+                        properties:
+                          kind:
+                            enum:
+                            - Secret
+                            - ConfigMap
+                            type: string
+                          name:
+                            maxLength: 253
+                            minLength: 1
+                            type: string
+                          optional:
+                            type: boolean
+                          targetPath:
+                            maxLength: 250
+                            pattern: ^([a-zA-Z0-9_\-.\\\/]|\[[0-9]{1,5}\])+$
+                            type: string
+                          valuesKey:
+                            maxLength: 253
+                            pattern: ^[\-._a-zA-Z0-9]+$
+                            type: string
+                        required:
+                        - kind
+                        - name
+                        type: object
+                      type: array
+                  type: object
+                type: object
               profileRef:
                 properties:
                   name:

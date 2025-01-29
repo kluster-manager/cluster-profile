@@ -121,6 +121,13 @@ func (in *ManagedClusterProfileBindingSpec) DeepCopyInto(out *ManagedClusterProf
 	*out = *in
 	out.ProfileRef = in.ProfileRef
 	in.ClusterMetadata.DeepCopyInto(&out.ClusterMetadata)
+	if in.Features != nil {
+		in, out := &in.Features, &out.Features
+		*out = make(map[string]FeatureSpec, len(*in))
+		for key, val := range *in {
+			(*out)[key] = *val.DeepCopy()
+		}
+	}
 	return
 }
 

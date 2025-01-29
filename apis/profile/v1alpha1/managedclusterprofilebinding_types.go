@@ -32,6 +32,7 @@ const (
 type ManagedClusterProfileBindingSpec struct {
 	ProfileRef      core.LocalObjectReference `json:"profileRef"`
 	ClusterMetadata kmapi.ClusterInfo         `json:"clusterMetadata"`
+	Features        map[string]FeatureSpec    `json:"features,omitempty"`
 }
 
 type BindingStatusPhase string
