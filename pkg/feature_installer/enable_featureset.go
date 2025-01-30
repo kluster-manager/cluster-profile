@@ -192,12 +192,12 @@ func enableFeatureSet(ctx context.Context, kc client.Client, featureSet string, 
 			return err
 		}
 
-		return applyFeatureSet(ctx, kc, mw, fakeServer, featureSet, []string{"kube-ui-server"}, profile, &mc)
+		return applyFeatureSet(ctx, kc, mw, fakeServer, featureSet, []string{"kube-ui-server"}, profile, &mc, profileBinding)
 	}
-	return applyFeatureSet(ctx, kc, mw, fakeServer, featureSet, features, profile, &mc)
+	return applyFeatureSet(ctx, kc, mw, fakeServer, featureSet, features, profile, &mc, profileBinding)
 }
 
-func applyFeatureSet(ctx context.Context, kc client.Client, mw *workv1.ManifestWork, fakeServer *FakeServer, featureSet string, features []string, profile *profilev1alpha1.ManagedClusterSetProfile, mc *v1.ManagedCluster) error {
+func applyFeatureSet(ctx context.Context, kc client.Client, mw *workv1.ManifestWork, fakeServer *FakeServer, featureSet string, features []string, profile *profilev1alpha1.ManagedClusterSetProfile, mc *v1.ManagedCluster, profileBinding *profilev1alpha1.ManagedClusterProfileBinding) error {
 	logger := klog.FromContext(ctx)
 	var err error
 	var fsObj uiapi.FeatureSet
@@ -216,6 +216,21 @@ func applyFeatureSet(ctx context.Context, kc client.Client, mw *workv1.ManifestW
 	// Update values based on user-provided inputs stored in the profile
 	for _, f := range features {
 		featureKey := getFeaturePathInValues(f)
+		if profileBinding.Spec.Features != nil {
+			if _, exist := profileBinding.Spec.Features[f]; exist {
+				var valuesMap map[string]interface{}
+				if profileBinding.Spec.Features[f].Values != nil {
+					if err = json.Unmarshal(profileBinding.Spec.Features[f].Values.Raw, &valuesMap); err != nil {
+						return err
+					}
+					if err = unstructured.SetNestedMap(model, valuesMap, "resources", featureKey, "spec", "values"); err != nil {
+						return err
+					}
+					continue
+				}
+			}
+		}
+
 		curValues, _, err := unstructured.NestedMap(model, "resources", featureKey, "spec", "values")
 		if err != nil {
 			return err
