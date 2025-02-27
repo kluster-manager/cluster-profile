@@ -178,13 +178,13 @@ func enableFeatureSet(ctx context.Context, kc client.Client, featureSet string, 
 			SourceRef: hub.BootstrapHelmRepository(fakeServer.FakeClient),
 		}
 
-		defaultValues, err := getDefaultValues(NewVirtualRegistry(fakeServer.FakeClient), chartRef)
+		defaultValues, err := GetDefaultValues(NewVirtualRegistry(fakeServer.FakeClient), chartRef)
 		if err != nil {
 			return err
 		}
 
 		mergedValues := values.MergeMaps(defaultValues, overrideValues)
-		if err = createHR("opscenter-features", "opscenter-core", hub.BootstrapHelmRepositoryNamespace(), profile, featureObj, fakeServer, mergedValues); err != nil {
+		if err = CreateHelmRelease("opscenter-features", "opscenter-core", hub.BootstrapHelmRepositoryNamespace(), profile, featureObj, fakeServer, mergedValues); err != nil {
 			return err
 		}
 
