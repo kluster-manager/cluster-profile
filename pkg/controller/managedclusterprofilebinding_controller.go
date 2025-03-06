@@ -149,7 +149,7 @@ func setOpscenterFeaturesVersion(ctx context.Context, kc client.Client, profileB
 			return ""
 		}
 
-		_, name, err := feature_installer.GetKindAndName(object)
+		_, name, _, err := feature_installer.GetKindNameNamespace(object)
 		if err != nil {
 			return ""
 		}

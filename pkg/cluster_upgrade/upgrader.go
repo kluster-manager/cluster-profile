@@ -97,7 +97,7 @@ func UpgradeCluster(profileBinding *profilev1alpha1.ManagedClusterProfileBinding
 			return err
 		}
 
-		_, name, err := feature_installer.GetKindAndName(object)
+		_, name, _, err := feature_installer.GetKindNameNamespace(object)
 		if err != nil {
 			return err
 		}
@@ -167,7 +167,7 @@ func UpgradeCluster(profileBinding *profilev1alpha1.ManagedClusterProfileBinding
 				return err
 			}
 
-			kind, name, err := feature_installer.GetKindAndName(object)
+			kind, name, _, err := feature_installer.GetKindNameNamespace(object)
 			if err != nil {
 				return err
 			}

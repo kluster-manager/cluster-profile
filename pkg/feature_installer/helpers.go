@@ -213,9 +213,12 @@ func updateManifestWork(ctx context.Context, fakeServer *FakeServer, kc client.C
 
 	current, _ := fakeServer.FakeS.Export()
 	mw.Spec.Workload.Manifests = nil
+	mw.Spec.ManifestConfigs = nil
+
+	configOptions := make([]workv1.ManifestConfigOption, 0)
 	for _, item := range current {
 		m := workv1.Manifest{}
-		kind, name, err := GetKindAndName(item.Object)
+		kind, name, ns, err := GetKindNameNamespace(item.Object)
 		if err != nil {
 			return err
 		}
@@ -233,8 +236,33 @@ func updateManifestWork(ctx context.Context, fakeServer *FakeServer, kc client.C
 		}
 
 		mw.Spec.Workload.Manifests = append(mw.Spec.Workload.Manifests, m)
+
+		configOptions = append(configOptions, workv1.ManifestConfigOption{
+			ResourceIdentifier: workv1.ResourceIdentifier{
+				Group:     fluxhelm.GroupVersion.Group,
+				Resource:  "helmreleases",
+				Name:      name,
+				Namespace: ns,
+			},
+			FeedbackRules: []workv1.FeedbackRule{
+				{
+					Type: workv1.JSONPathsType,
+					JsonPaths: []workv1.JsonPath{
+						{
+							Name: "Ready",
+							Path: `.status.conditions[?(@.type=="Ready")].status`,
+						},
+						{
+							Name: "Released",
+							Path: `.status.conditions[?(@.type=="Released")].status`,
+						},
+					},
+				},
+			},
+		})
 	}
 
+	mw.Spec.ManifestConfigs = configOptions
 	_, err := cu.CreateOrPatch(ctx, kc, mw, func(obj client.Object, createOp bool) client.Object {
 		in := obj.(*workv1.ManifestWork)
 		in.Spec = mw.Spec
@@ -293,23 +321,28 @@ func GetDefaultValues(reg repo.IRegistry, chartRef releasesapi.ChartSourceRef) (
 	return chart.Values, nil
 }
 
-func GetKindAndName(item map[string]interface{}) (string, string, error) {
+func GetKindNameNamespace(item map[string]interface{}) (string, string, string, error) {
 	unstructuredObj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&item)
 	if err != nil {
-		return "", "", err
+		return "", "", "", err
 	}
 
 	unstructuredResource := unstructured.Unstructured{Object: unstructuredObj}
 	kind, found, err := unstructured.NestedString(unstructuredResource.Object, "kind")
 	if err != nil || !found {
-		return "", "", err
+		return "", "", "", err
 	}
 
 	name, found, err := unstructured.NestedString(unstructuredResource.Object, "metadata", "name")
 	if err != nil || !found {
-		return "", "", err
+		return "", "", "", err
 	}
-	return kind, name, nil
+
+	namespace, found, _ := unstructured.NestedString(unstructuredResource.Object, "metadata", "namespace")
+	if !found {
+		return kind, name, "", nil
+	}
+	return kind, name, namespace, nil
 }
 
 func sanitizeFeatures(kc client.Client, clusterName string, features []string) ([]string, error) {
