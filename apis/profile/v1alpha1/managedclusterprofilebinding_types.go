@@ -55,9 +55,9 @@ type ManagedClusterProfileBindingStatus struct {
 	// ObservedGeneration is the most recent generation observed for this resource. It corresponds to the
 	// resource's generation, which is updated on mutation by the API Server.
 	// +optional
-	ObservedGeneration              int64             `json:"observedGeneration,omitempty"`
-	CurrentOpscenterFeaturesVersion string            `json:"currentOpscenterFeaturesVersion,omitempty"`
-	ManifestWorks                   map[string]string `json:"manifestWorks,omitempty"`
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+	// +optional
+	ObservedOpscenterFeaturesVersion string `json:"observedOpscenterFeaturesVersion,omitempty"`
 }
 
 // +genclient

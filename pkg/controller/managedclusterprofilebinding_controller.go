@@ -81,7 +81,7 @@ func (r *ManagedClusterProfileBindingReconciler) Reconcile(ctx context.Context, 
 		featureInfo[val.FeatureSet] = append(featureInfo[val.FeatureSet], f)
 	}
 
-	if profileBinding.Spec.OpscenterFeaturesVersion != "" && profileBinding.Spec.OpscenterFeaturesVersion != profileBinding.Status.CurrentOpscenterFeaturesVersion {
+	if profileBinding.Spec.OpscenterFeaturesVersion != "" && profileBinding.Spec.OpscenterFeaturesVersion != profileBinding.Status.ObservedOpscenterFeaturesVersion {
 		if err := cluster_upgrade.UpgradeCluster(profileBinding, profile, r.Client); err != nil {
 			return reconcile.Result{}, r.setOpscenterFeaturesVersion(ctx, profileBinding, err)
 		}
@@ -131,7 +131,7 @@ func (r *ManagedClusterProfileBindingReconciler) setOpscenterFeaturesVersion(ctx
 		return fmt.Errorf("failed to get latest account object: %w", err)
 	}
 
-	pb.Status.CurrentOpscenterFeaturesVersion = setOpscenterFeaturesVersion(ctx, r.Client, pb.Namespace)
+	pb.Status.ObservedOpscenterFeaturesVersion = setOpscenterFeaturesVersion(ctx, r.Client, pb.Namespace)
 	if updateErr := r.Client.Status().Update(ctx, &pb); updateErr != nil {
 		return fmt.Errorf("failed to update status to Failed: %w", updateErr)
 	}

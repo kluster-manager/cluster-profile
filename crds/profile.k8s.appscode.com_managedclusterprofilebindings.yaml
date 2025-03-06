@@ -177,15 +177,11 @@ spec:
                   - type
                   type: object
                 type: array
-              currentOpscenterFeaturesVersion:
-                type: string
-              manifestWorks:
-                additionalProperties:
-                  type: string
-                type: object
               observedGeneration:
                 format: int64
                 type: integer
+              observedOpscenterFeaturesVersion:
+                type: string
               phase:
                 type: string
             type: object
