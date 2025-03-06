@@ -58,7 +58,7 @@ func createConfigMapInSpokeClusterNamespace(kc client.Client, ver, clusterName s
 				return nil, err
 			}
 
-			kind, _, err := feature_installer.GetKindAndName(object)
+			kind, _, _, err := feature_installer.GetKindNameNamespace(object)
 			if err != nil {
 				return nil, err
 			}
