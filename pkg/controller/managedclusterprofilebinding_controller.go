@@ -18,12 +18,18 @@ package controller
 
 import (
 	"context"
+	"fmt"
 
 	profilev1alpha1 "github.com/kluster-manager/cluster-profile/apis/profile/v1alpha1"
+	"github.com/kluster-manager/cluster-profile/pkg/cluster_upgrade"
 	"github.com/kluster-manager/cluster-profile/pkg/feature_installer"
+	"github.com/kluster-manager/cluster-profile/pkg/utils"
 
+	fluxhelm "github.com/fluxcd/helm-controller/api/v2"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	workv1 "open-cluster-management.io/api/work/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -75,11 +81,17 @@ func (r *ManagedClusterProfileBindingReconciler) Reconcile(ctx context.Context, 
 		featureInfo[val.FeatureSet] = append(featureInfo[val.FeatureSet], f)
 	}
 
-	if err = feature_installer.EnableFeatures(ctx, r.Client, profileBinding, featureInfo, profile); err != nil {
-		return reconcile.Result{}, err
+	if profileBinding.Spec.OpscenterFeaturesVersion != "" && profileBinding.Spec.OpscenterFeaturesVersion != profileBinding.Status.ObservedOpscenterFeaturesVersion {
+		if err := cluster_upgrade.UpgradeCluster(profileBinding, profile, r.Client); err != nil {
+			return reconcile.Result{}, r.setOpscenterFeaturesVersion(ctx, profileBinding, err)
+		}
+	} else if profile.Spec.Features["opscenter-features"].Chart.Version == profileBinding.Spec.OpscenterFeaturesVersion || profileBinding.Spec.OpscenterFeaturesVersion == "" {
+		if err = feature_installer.EnableFeatures(ctx, r.Client, profileBinding, featureInfo, profile); err != nil {
+			return reconcile.Result{}, r.setOpscenterFeaturesVersion(ctx, profileBinding, err)
+		}
 	}
 
-	return reconcile.Result{}, nil
+	return reconcile.Result{}, r.setOpscenterFeaturesVersion(ctx, profileBinding, nil)
 }
 
 func (r *ManagedClusterProfileBindingReconciler) mapClusterProfileToClusterProfileBinding(ctx context.Context, obj client.Object) []reconcile.Request {
@@ -110,6 +122,47 @@ func (r *ManagedClusterProfileBindingReconciler) mapClusterProfileToClusterProfi
 	}
 
 	return requests
+}
+
+func (r *ManagedClusterProfileBindingReconciler) setOpscenterFeaturesVersion(ctx context.Context, profileBinding *profilev1alpha1.ManagedClusterProfileBinding, err error) error {
+	var pb profilev1alpha1.ManagedClusterProfileBinding
+	// Re-fetch the latest version of the Account object
+	if err := r.Client.Get(ctx, client.ObjectKeyFromObject(profileBinding), &pb); err != nil && !errors.IsNotFound(err) {
+		return fmt.Errorf("failed to get latest account object: %w", err)
+	}
+
+	pb.Status.ObservedOpscenterFeaturesVersion = setOpscenterFeaturesVersion(ctx, r.Client, pb.Namespace)
+	if updateErr := r.Client.Status().Update(ctx, &pb); updateErr != nil {
+		return fmt.Errorf("failed to update status to Failed: %w", updateErr)
+	}
+	return err
+}
+
+func setOpscenterFeaturesVersion(ctx context.Context, kc client.Client, profileBindingNamespace string) string {
+	var mw workv1.ManifestWork
+	if err := kc.Get(ctx, types.NamespacedName{Name: "opscenter-core", Namespace: profileBindingNamespace}, &mw); err != nil {
+		return ""
+	}
+	for _, m := range mw.Spec.Workload.Manifests {
+		object := map[string]interface{}{}
+		if err := utils.Copy(m, &object); err != nil {
+			return ""
+		}
+
+		_, name, err := feature_installer.GetKindAndName(object)
+		if err != nil {
+			return ""
+		}
+
+		if name == "opscenter-features" {
+			hr := fluxhelm.HelmRelease{}
+			if err = utils.Copy(m, &hr); err != nil {
+				return ""
+			}
+			return hr.Spec.Chart.Spec.Version
+		}
+	}
+	return ""
 }
 
 // SetupWithManager sets up the controller with the Manager.

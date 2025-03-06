@@ -24,6 +24,8 @@ import (
 	profilev1alpha1 "github.com/kluster-manager/cluster-profile/apis/profile/v1alpha1"
 	"github.com/kluster-manager/cluster-profile/pkg/controller"
 
+	fluxhelm "github.com/fluxcd/helm-controller/api/v2"
+	fluxsource "github.com/fluxcd/source-controller/api/v1"
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -55,6 +57,8 @@ func init() {
 	utilruntime.Must(workv1.Install(scheme))
 	utilruntime.Must(workv1alpha1.Install(scheme))
 	utilruntime.Must(uiapi.AddToScheme(scheme))
+	utilruntime.Must(fluxhelm.AddToScheme(scheme))
+	utilruntime.Must(fluxsource.AddToScheme(scheme))
 }
 
 func NewCmdManager() *cobra.Command {

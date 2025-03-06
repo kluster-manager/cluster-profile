@@ -215,7 +215,7 @@ func updateManifestWork(ctx context.Context, fakeServer *FakeServer, kc client.C
 	mw.Spec.Workload.Manifests = nil
 	for _, item := range current {
 		m := workv1.Manifest{}
-		kind, name, err := getKindAndName(item.Object)
+		kind, name, err := GetKindAndName(item.Object)
 		if err != nil {
 			return err
 		}
@@ -285,7 +285,7 @@ func featureToBeEnabled(feature string, values map[string]any) (bool, error) {
 	return ok, err
 }
 
-func getDefaultValues(reg repo.IRegistry, chartRef releasesapi.ChartSourceRef) (map[string]interface{}, error) {
+func GetDefaultValues(reg repo.IRegistry, chartRef releasesapi.ChartSourceRef) (map[string]interface{}, error) {
 	chart, err := reg.GetChart(chartRef)
 	if err != nil {
 		return nil, err
@@ -293,7 +293,7 @@ func getDefaultValues(reg repo.IRegistry, chartRef releasesapi.ChartSourceRef) (
 	return chart.Values, nil
 }
 
-func getKindAndName(item map[string]interface{}) (string, string, error) {
+func GetKindAndName(item map[string]interface{}) (string, string, error) {
 	unstructuredObj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&item)
 	if err != nil {
 		return "", "", err

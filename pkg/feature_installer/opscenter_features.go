@@ -57,6 +57,22 @@ func InstallOpscenterFeaturesOnFakeServer(fakeServer *FakeServer, profile *profi
 		}
 	}
 
+	overrides, err := GetOverrideValues(overrides, clusterMetadata)
+	if err != nil {
+		return nil, err
+	}
+	overrideValues, err := json.Marshal(overrides)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := InstallOpscenterFeatures(overrideValues, fakeServer, chartRef); err != nil {
+		return nil, err
+	}
+	return overrides, nil
+}
+
+func GetOverrideValues(overrides map[string]interface{}, clusterMetadata *kmapi.ClusterInfo) (map[string]interface{}, error) {
 	if clusterMetadata != nil {
 		overrides["clusterMetadata"] = map[string]interface{}{
 			"uid":  clusterMetadata.UID,
@@ -86,19 +102,10 @@ func InstallOpscenterFeaturesOnFakeServer(fakeServer *FakeServer, profile *profi
 			}
 		}
 	}
-
-	overrideValues, err := json.Marshal(overrides)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := installOpscenterFeatures(overrideValues, fakeServer, chartRef); err != nil {
-		return nil, err
-	}
 	return overrides, nil
 }
 
-func installOpscenterFeatures(overrideValues []byte, fakeServer *FakeServer, chartRef *releasesapi.ChartSourceRef) error {
+func InstallOpscenterFeatures(overrideValues []byte, fakeServer *FakeServer, chartRef *releasesapi.ChartSourceRef) error {
 	deployOpts := &action.DeployOptions{
 		ChartSourceFlatRef: releasesapi.ChartSourceFlatRef{
 			Name:            chartRef.Name,
@@ -122,10 +129,10 @@ func installOpscenterFeatures(overrideValues []byte, fakeServer *FakeServer, cha
 		DisableOpenAPIValidation: true,
 	}
 
-	return installChart(fakeServer, chartRef, deployOpts)
+	return InstallChart(fakeServer, chartRef, deployOpts)
 }
 
-func installChart(fakeServer *FakeServer, chartRef *releasesapi.ChartSourceRef, deployOpts *action.DeployOptions) error {
+func InstallChart(fakeServer *FakeServer, chartRef *releasesapi.ChartSourceRef, deployOpts *action.DeployOptions) error {
 	reg := NewVirtualRegistry(fakeServer.FakeClient)
 	err := applyCRDs(fakeServer.FakeRestConfig, reg, *chartRef)
 	if err != nil {

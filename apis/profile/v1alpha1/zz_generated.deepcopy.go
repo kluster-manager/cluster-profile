@@ -151,13 +151,6 @@ func (in *ManagedClusterProfileBindingStatus) DeepCopyInto(out *ManagedClusterPr
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
-	if in.ManifestWorks != nil {
-		in, out := &in.ManifestWorks, &out.ManifestWorks
-		*out = make(map[string]string, len(*in))
-		for key, val := range *in {
-			(*out)[key] = val
-		}
-	}
 	return
 }
 
