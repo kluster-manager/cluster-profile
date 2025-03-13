@@ -66,7 +66,7 @@ type ManagedClusterProfileBindingStatus struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.phase"
-// +kubebuilder:printcolumn:name="Current Version",type="string",JSONPath=".status.currentOpscenterFeaturesVersion"
+// +kubebuilder:printcolumn:name="Current Version",type="string",JSONPath=".status.observedOpscenterFeaturesVersion"
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 
 // ManagedClusterProfileBinding is the Schema for the managedclusterprofilebindings API
