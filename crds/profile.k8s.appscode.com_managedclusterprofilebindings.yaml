@@ -18,7 +18,7 @@ spec:
     - jsonPath: .status.phase
       name: Status
       type: string
-    - jsonPath: .status.currentOpscenterFeaturesVersion
+    - jsonPath: .status.observedOpscenterFeaturesVersion
       name: Current Version
       type: string
     - jsonPath: .metadata.creationTimestamp
