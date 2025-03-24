@@ -35,7 +35,7 @@ import (
 	releasesapi "x-helm.dev/apimachinery/apis/releases/v1alpha1"
 )
 
-func InstallOpscenterFeaturesOnFakeServer(fakeServer *FakeServer, profile *profilev1alpha1.ManagedClusterSetProfile, clusterMetadata *kmapi.ClusterInfo, chartRef *releasesapi.ChartSourceRef) (map[string]interface{}, error) {
+func InstallOpscenterFeaturesOnFakeServer(fakeServer *FakeServer, profile *profilev1alpha1.ManagedClusterSetProfile, profileBinding *profilev1alpha1.ManagedClusterProfileBinding, clusterMetadata *kmapi.ClusterInfo, chartRef *releasesapi.ChartSourceRef) (map[string]interface{}, error) {
 	overrides := make(map[string]interface{})
 	if profile.Spec.Features["opscenter-features"].Chart.SourceRef.Name != "" {
 		chart := profile.Spec.Features["opscenter-features"].Chart
@@ -64,6 +64,10 @@ func InstallOpscenterFeaturesOnFakeServer(fakeServer *FakeServer, profile *profi
 	overrideValues, err := json.Marshal(overrides)
 	if err != nil {
 		return nil, err
+	}
+
+	if profileBinding != nil && profileBinding.Spec.Features != nil && profileBinding.Spec.Features["opscenter-features"].Values != nil {
+		overrideValues = profileBinding.Spec.Features["opscenter-features"].Values.Raw
 	}
 
 	if err := InstallOpscenterFeatures(overrideValues, fakeServer, chartRef); err != nil {

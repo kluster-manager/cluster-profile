@@ -123,6 +123,7 @@ func (r *ManagedClusterSetProfileReconciler) Reconcile(ctx context.Context, req 
 		if len(profileBindingList.Items) > 0 {
 			profileBinding.Name = profileBindingList.Items[0].Name
 			profileBinding.Spec.OpscenterFeaturesVersion = profileBindingList.Items[0].Spec.OpscenterFeaturesVersion
+			profileBinding.Spec.Features = profileBindingList.Items[0].Spec.Features
 		}
 
 		_, err = cu.CreateOrPatch(context.Background(), r.Client, profileBinding, func(obj client.Object, createOp bool) client.Object {

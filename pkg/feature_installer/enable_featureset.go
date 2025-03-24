@@ -153,7 +153,7 @@ func enableFeatureSet(ctx context.Context, kc client.Client, featureSet string, 
 	}
 
 	var overrideValues map[string]interface{}
-	if overrideValues, err = InstallOpscenterFeaturesOnFakeServer(fakeServer, profile, &profileBinding.Spec.ClusterMetadata, nil); err != nil {
+	if overrideValues, err = InstallOpscenterFeaturesOnFakeServer(fakeServer, profile, profileBinding, &profileBinding.Spec.ClusterMetadata, nil); err != nil {
 		return err
 	}
 
@@ -183,7 +183,16 @@ func enableFeatureSet(ctx context.Context, kc client.Client, featureSet string, 
 			return err
 		}
 
-		mergedValues := values.MergeMaps(defaultValues, overrideValues)
+		var mergedValues map[string]interface{}
+		if profileBinding.Spec.Features != nil && profileBinding.Spec.Features[hub.ChartOpscenterFeatures].Values != nil {
+			err := json.Unmarshal(profileBinding.Spec.Features[hub.ChartOpscenterFeatures].Values.Raw, &mergedValues)
+			if err != nil {
+				return err
+			}
+		} else {
+			mergedValues = values.MergeMaps(defaultValues, overrideValues)
+		}
+
 		if err = CreateHelmRelease("opscenter-features", "opscenter-core", hub.BootstrapHelmRepositoryNamespace(), profile, featureObj, fakeServer, mergedValues); err != nil {
 			return err
 		}
