@@ -99,8 +99,7 @@ func createConfigMapInSpokeClusterNamespace(kc client.Client, ver, clusterName s
 	return &cm, nil
 }
 
-func InstallOpscenterFeaturesOnFakeServer(fakeServer *feature_installer.FakeServer, clusterMetadata *kmapi.ClusterInfo, chartRef *releasesapi.ChartSourceRef) (map[string]interface{}, error) {
-	overrides := make(map[string]interface{})
+func InstallOpscenterFeaturesOnFakeServer(fakeServer *feature_installer.FakeServer, overrides map[string]interface{}, clusterMetadata *kmapi.ClusterInfo, chartRef *releasesapi.ChartSourceRef) (map[string]interface{}, error) {
 	overrides, err := feature_installer.GetOverrideValues(overrides, clusterMetadata)
 	if err != nil {
 		return nil, err

@@ -68,6 +68,11 @@ func InstallOpscenterFeaturesOnFakeServer(fakeServer *FakeServer, profile *profi
 
 	if profileBinding != nil && profileBinding.Spec.Features != nil && profileBinding.Spec.Features["opscenter-features"].Values != nil {
 		overrideValues = profileBinding.Spec.Features["opscenter-features"].Values.Raw
+
+		// Unmarshal overrideValues back into overrides
+		if err := json.Unmarshal(overrideValues, &overrides); err != nil {
+			return nil, err
+		}
 	}
 
 	if err := InstallOpscenterFeatures(overrideValues, fakeServer, chartRef); err != nil {

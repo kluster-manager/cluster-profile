@@ -65,10 +65,10 @@ func GetNewRuntimeClient(restConfig *rest.Config) (client.Client, error) {
 	return client.New(restConfig, client.Options{
 		Scheme: scheme,
 		Mapper: mapper,
-		WarningHandler: client.WarningHandlerOptions{
-			SuppressWarnings:   true,
-			AllowDuplicateLogs: false,
-		},
+		//WarningHandler: client.WarningHandlerOptions{
+		//	SuppressWarnings:   true,
+		//	AllowDuplicateLogs: false,
+		//},
 	})
 }
 
