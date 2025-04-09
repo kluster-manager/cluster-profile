@@ -34,8 +34,7 @@ type statusError interface {
 
 // ErrorToAPIStatus converts an error to an metav1.Status object.
 func ErrorToAPIStatus(err error) *metav1.Status {
-	// WARNING: https://stackoverflow.com/a/46275411/244009
-	if err == nil || reflect.ValueOf(err).IsNil() /*for error wrapper interfaces*/ {
+	if isNil(err) {
 		return &metav1.Status{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "Status",
@@ -88,6 +87,23 @@ func ErrorToAPIStatus(err error) *metav1.Status {
 			Reason:  metav1.StatusReasonUnknown,
 			Message: err.Error(),
 		}
+	}
+}
+
+func isNil(i any) bool {
+	if i == nil {
+		return true
+	}
+
+	// WARNING: https://stackoverflow.com/a/46275411/244009
+	/*for error wrapper interfaces*/
+	v := reflect.ValueOf(i)
+	// Check if the kind is something that can be nil
+	switch v.Kind() {
+	case reflect.Ptr, reflect.Slice, reflect.Map, reflect.Chan, reflect.Interface:
+		return v.IsNil()
+	default:
+		return false
 	}
 }
 
