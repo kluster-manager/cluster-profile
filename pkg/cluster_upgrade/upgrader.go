@@ -18,6 +18,7 @@ package cluster_upgrade
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	profilev1alpha1 "github.com/kluster-manager/cluster-profile/apis/profile/v1alpha1"
@@ -65,7 +66,14 @@ func UpgradeCluster(profileBinding *profilev1alpha1.ManagedClusterProfileBinding
 	}
 
 	var overrideValues map[string]interface{}
-	if overrideValues, err = InstallOpscenterFeaturesOnFakeServer(fakeServer, &profileBinding.Spec.ClusterMetadata, &chartRef); err != nil {
+	if profileBinding.Spec.Features == nil || profileBinding.Spec.Features[hub.ChartOpscenterFeatures].Values == nil {
+		return errors.New("no values found in profileBinding")
+	}
+	if err := json.Unmarshal(profileBinding.Spec.Features[hub.ChartOpscenterFeatures].Values.Raw, &overrideValues); err != nil {
+		return fmt.Errorf("failed to unmarshal JSON: %w", err)
+	}
+
+	if overrideValues, err = InstallOpscenterFeaturesOnFakeServer(fakeServer, overrideValues, &profileBinding.Spec.ClusterMetadata, &chartRef); err != nil {
 		return err
 	}
 
