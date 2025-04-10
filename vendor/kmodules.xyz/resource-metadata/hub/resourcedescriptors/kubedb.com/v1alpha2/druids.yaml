@@ -158,12 +158,16 @@ spec:
                 activeFrom:
                   format: date-time
                   type: string
+                apiGroup:
+                  type: string
                 externallyManaged:
                   type: boolean
                 name:
                   default: ""
                   type: string
                 rotateAfter:
+                  type: string
+                secretStoreName:
                   type: string
               type: object
               x-kubernetes-map-type: atomic
@@ -249,6 +253,24 @@ spec:
                       required:
                       - name
                       type: object
+                    manifestOptions:
+                      properties:
+                        archiver:
+                          default: false
+                          type: boolean
+                        archiverRef:
+                          properties:
+                            name:
+                              type: string
+                            namespace:
+                              type: string
+                          required:
+                          - name
+                          type: object
+                        initScript:
+                          default: false
+                          type: boolean
+                      type: object
                     manifestRepository:
                       properties:
                         name:
@@ -298,10 +320,12 @@ spec:
                         diskURI:
                           type: string
                         fsType:
+                          default: ext4
                           type: string
                         kind:
                           type: string
                         readOnly:
+                          default: false
                           type: boolean
                       required:
                       - diskName
@@ -732,6 +756,8 @@ spec:
                                 properties:
                                   name:
                                     type: string
+                                  request:
+                                    type: string
                                 required:
                                 - name
                                 type: object
@@ -863,6 +889,13 @@ spec:
                       required:
                       - path
                       type: object
+                    image:
+                      properties:
+                        pullPolicy:
+                          type: string
+                        reference:
+                          type: string
+                      type: object
                     iscsi:
                       properties:
                         chapAuthDiscovery:
@@ -876,6 +909,7 @@ spec:
                         iqn:
                           type: string
                         iscsiInterface:
+                          default: default
                           type: string
                         lun:
                           format: int32
@@ -1122,6 +1156,7 @@ spec:
                         image:
                           type: string
                         keyring:
+                          default: /etc/ceph/keyring
                           type: string
                         monitors:
                           items:
@@ -1129,6 +1164,7 @@ spec:
                           type: array
                           x-kubernetes-list-type: atomic
                         pool:
+                          default: rbd
                           type: string
                         readOnly:
                           type: boolean
@@ -1140,6 +1176,7 @@ spec:
                           type: object
                           x-kubernetes-map-type: atomic
                         user:
+                          default: admin
                           type: string
                       required:
                       - image
@@ -1148,6 +1185,7 @@ spec:
                     scaleIO:
                       properties:
                         fsType:
+                          default: xfs
                           type: string
                         gateway:
                           type: string
@@ -1165,6 +1203,7 @@ spec:
                         sslEnabled:
                           type: boolean
                         storageMode:
+                          default: ThinProvisioned
                           type: string
                         storagePool:
                           type: string
@@ -1245,12 +1284,16 @@ spec:
                 activeFrom:
                   format: date-time
                   type: string
+                apiGroup:
+                  type: string
                 externallyManaged:
                   type: boolean
                 name:
                   default: ""
                   type: string
                 rotateAfter:
+                  type: string
+                secretStoreName:
                   type: string
               type: object
               x-kubernetes-map-type: atomic
@@ -1368,6 +1411,8 @@ spec:
                               items:
                                 properties:
                                   name:
+                                    type: string
+                                  request:
                                     type: string
                                 required:
                                 - name
@@ -1939,6 +1984,7 @@ spec:
                                             format: int32
                                             type: integer
                                           service:
+                                            default: ""
                                             type: string
                                         required:
                                         - port
@@ -2045,6 +2091,7 @@ spec:
                                             format: int32
                                             type: integer
                                           service:
+                                            default: ""
                                             type: string
                                         required:
                                         - port
@@ -2125,6 +2172,8 @@ spec:
                                         items:
                                           properties:
                                             name:
+                                              type: string
+                                            request:
                                               type: string
                                           required:
                                           - name
@@ -2243,6 +2292,7 @@ spec:
                                             format: int32
                                             type: integer
                                           service:
+                                            default: ""
                                             type: string
                                         required:
                                         - port
@@ -2641,6 +2691,7 @@ spec:
                                             format: int32
                                             type: integer
                                           service:
+                                            default: ""
                                             type: string
                                         required:
                                         - port
@@ -2747,6 +2798,7 @@ spec:
                                             format: int32
                                             type: integer
                                           service:
+                                            default: ""
                                             type: string
                                         required:
                                         - port
@@ -2827,6 +2879,8 @@ spec:
                                         items:
                                           properties:
                                             name:
+                                              type: string
+                                            request:
                                               type: string
                                           required:
                                           - name
@@ -2945,6 +2999,7 @@ spec:
                                             format: int32
                                             type: integer
                                           service:
+                                            default: ""
                                             type: string
                                         required:
                                         - port
@@ -3349,6 +3404,7 @@ spec:
                                             format: int32
                                             type: integer
                                           service:
+                                            default: ""
                                             type: string
                                         required:
                                         - port
@@ -3455,6 +3511,7 @@ spec:
                                             format: int32
                                             type: integer
                                           service:
+                                            default: ""
                                             type: string
                                         required:
                                         - port
@@ -3535,6 +3592,8 @@ spec:
                                         items:
                                           properties:
                                             name:
+                                              type: string
+                                            request:
                                               type: string
                                           required:
                                           - name
@@ -3653,6 +3712,7 @@ spec:
                                             format: int32
                                             type: integer
                                           service:
+                                            default: ""
                                             type: string
                                         required:
                                         - port
@@ -3847,6 +3907,8 @@ spec:
                                 runAsUser:
                                   format: int64
                                   type: integer
+                                seLinuxChangePolicy:
+                                  type: string
                                 seLinuxOptions:
                                   properties:
                                     level:
@@ -3873,6 +3935,8 @@ spec:
                                     type: integer
                                   type: array
                                   x-kubernetes-list-type: atomic
+                                supplementalGroupsPolicy:
+                                  type: string
                                 sysctls:
                                   items:
                                     properties:
@@ -3949,10 +4013,12 @@ spec:
                                       diskURI:
                                         type: string
                                       fsType:
+                                        default: ext4
                                         type: string
                                       kind:
                                         type: string
                                       readOnly:
+                                        default: false
                                         type: boolean
                                     required:
                                     - diskName
@@ -4352,6 +4418,7 @@ spec:
                                       iqn:
                                         type: string
                                       iscsiInterface:
+                                        default: default
                                         type: string
                                       lun:
                                         format: int32
@@ -4600,6 +4667,7 @@ spec:
                                       image:
                                         type: string
                                       keyring:
+                                        default: /etc/ceph/keyring
                                         type: string
                                       monitors:
                                         items:
@@ -4607,6 +4675,7 @@ spec:
                                         type: array
                                         x-kubernetes-list-type: atomic
                                       pool:
+                                        default: rbd
                                         type: string
                                       readOnly:
                                         type: boolean
@@ -4618,6 +4687,7 @@ spec:
                                         type: object
                                         x-kubernetes-map-type: atomic
                                       user:
+                                        default: admin
                                         type: string
                                     required:
                                     - image
@@ -4626,6 +4696,7 @@ spec:
                                   scaleIO:
                                     properties:
                                       fsType:
+                                        default: xfs
                                         type: string
                                       gateway:
                                         type: string
@@ -4643,6 +4714,7 @@ spec:
                                       sslEnabled:
                                         type: boolean
                                       storageMode:
+                                        default: ThinProvisioned
                                         type: string
                                       storagePool:
                                         type: string
@@ -5012,6 +5084,7 @@ spec:
                                             format: int32
                                             type: integer
                                           service:
+                                            default: ""
                                             type: string
                                         required:
                                         - port
@@ -5118,6 +5191,7 @@ spec:
                                             format: int32
                                             type: integer
                                           service:
+                                            default: ""
                                             type: string
                                         required:
                                         - port
@@ -5198,6 +5272,8 @@ spec:
                                         items:
                                           properties:
                                             name:
+                                              type: string
+                                            request:
                                               type: string
                                           required:
                                           - name
@@ -5316,6 +5392,7 @@ spec:
                                             format: int32
                                             type: integer
                                           service:
+                                            default: ""
                                             type: string
                                         required:
                                         - port
@@ -5714,6 +5791,7 @@ spec:
                                             format: int32
                                             type: integer
                                           service:
+                                            default: ""
                                             type: string
                                         required:
                                         - port
@@ -5820,6 +5898,7 @@ spec:
                                             format: int32
                                             type: integer
                                           service:
+                                            default: ""
                                             type: string
                                         required:
                                         - port
@@ -5900,6 +5979,8 @@ spec:
                                         items:
                                           properties:
                                             name:
+                                              type: string
+                                            request:
                                               type: string
                                           required:
                                           - name
@@ -6018,6 +6099,7 @@ spec:
                                             format: int32
                                             type: integer
                                           service:
+                                            default: ""
                                             type: string
                                         required:
                                         - port
@@ -6422,6 +6504,7 @@ spec:
                                             format: int32
                                             type: integer
                                           service:
+                                            default: ""
                                             type: string
                                         required:
                                         - port
@@ -6528,6 +6611,7 @@ spec:
                                             format: int32
                                             type: integer
                                           service:
+                                            default: ""
                                             type: string
                                         required:
                                         - port
@@ -6608,6 +6692,8 @@ spec:
                                         items:
                                           properties:
                                             name:
+                                              type: string
+                                            request:
                                               type: string
                                           required:
                                           - name
@@ -6726,6 +6812,7 @@ spec:
                                             format: int32
                                             type: integer
                                           service:
+                                            default: ""
                                             type: string
                                         required:
                                         - port
@@ -6920,6 +7007,8 @@ spec:
                                 runAsUser:
                                   format: int64
                                   type: integer
+                                seLinuxChangePolicy:
+                                  type: string
                                 seLinuxOptions:
                                   properties:
                                     level:
@@ -6946,6 +7035,8 @@ spec:
                                     type: integer
                                   type: array
                                   x-kubernetes-list-type: atomic
+                                supplementalGroupsPolicy:
+                                  type: string
                                 sysctls:
                                   items:
                                     properties:
@@ -7022,10 +7113,12 @@ spec:
                                       diskURI:
                                         type: string
                                       fsType:
+                                        default: ext4
                                         type: string
                                       kind:
                                         type: string
                                       readOnly:
+                                        default: false
                                         type: boolean
                                     required:
                                     - diskName
@@ -7425,6 +7518,7 @@ spec:
                                       iqn:
                                         type: string
                                       iscsiInterface:
+                                        default: default
                                         type: string
                                       lun:
                                         format: int32
@@ -7673,6 +7767,7 @@ spec:
                                       image:
                                         type: string
                                       keyring:
+                                        default: /etc/ceph/keyring
                                         type: string
                                       monitors:
                                         items:
@@ -7680,6 +7775,7 @@ spec:
                                         type: array
                                         x-kubernetes-list-type: atomic
                                       pool:
+                                        default: rbd
                                         type: string
                                       readOnly:
                                         type: boolean
@@ -7691,6 +7787,7 @@ spec:
                                         type: object
                                         x-kubernetes-map-type: atomic
                                       user:
+                                        default: admin
                                         type: string
                                     required:
                                     - image
@@ -7699,6 +7796,7 @@ spec:
                                   scaleIO:
                                     properties:
                                       fsType:
+                                        default: xfs
                                         type: string
                                       gateway:
                                         type: string
@@ -7716,6 +7814,7 @@ spec:
                                       sslEnabled:
                                         type: boolean
                                       storageMode:
+                                        default: ThinProvisioned
                                         type: string
                                       storagePool:
                                         type: string
@@ -8096,6 +8195,7 @@ spec:
                                             format: int32
                                             type: integer
                                           service:
+                                            default: ""
                                             type: string
                                         required:
                                         - port
@@ -8202,6 +8302,7 @@ spec:
                                             format: int32
                                             type: integer
                                           service:
+                                            default: ""
                                             type: string
                                         required:
                                         - port
@@ -8282,6 +8383,8 @@ spec:
                                         items:
                                           properties:
                                             name:
+                                              type: string
+                                            request:
                                               type: string
                                           required:
                                           - name
@@ -8400,6 +8503,7 @@ spec:
                                             format: int32
                                             type: integer
                                           service:
+                                            default: ""
                                             type: string
                                         required:
                                         - port
@@ -8798,6 +8902,7 @@ spec:
                                             format: int32
                                             type: integer
                                           service:
+                                            default: ""
                                             type: string
                                         required:
                                         - port
@@ -8904,6 +9009,7 @@ spec:
                                             format: int32
                                             type: integer
                                           service:
+                                            default: ""
                                             type: string
                                         required:
                                         - port
@@ -8984,6 +9090,8 @@ spec:
                                         items:
                                           properties:
                                             name:
+                                              type: string
+                                            request:
                                               type: string
                                           required:
                                           - name
@@ -9102,6 +9210,7 @@ spec:
                                             format: int32
                                             type: integer
                                           service:
+                                            default: ""
                                             type: string
                                         required:
                                         - port
@@ -9506,6 +9615,7 @@ spec:
                                             format: int32
                                             type: integer
                                           service:
+                                            default: ""
                                             type: string
                                         required:
                                         - port
@@ -9612,6 +9722,7 @@ spec:
                                             format: int32
                                             type: integer
                                           service:
+                                            default: ""
                                             type: string
                                         required:
                                         - port
@@ -9692,6 +9803,8 @@ spec:
                                         items:
                                           properties:
                                             name:
+                                              type: string
+                                            request:
                                               type: string
                                           required:
                                           - name
@@ -9810,6 +9923,7 @@ spec:
                                             format: int32
                                             type: integer
                                           service:
+                                            default: ""
                                             type: string
                                         required:
                                         - port
@@ -10004,6 +10118,8 @@ spec:
                                 runAsUser:
                                   format: int64
                                   type: integer
+                                seLinuxChangePolicy:
+                                  type: string
                                 seLinuxOptions:
                                   properties:
                                     level:
@@ -10030,6 +10146,8 @@ spec:
                                     type: integer
                                   type: array
                                   x-kubernetes-list-type: atomic
+                                supplementalGroupsPolicy:
+                                  type: string
                                 sysctls:
                                   items:
                                     properties:
@@ -10106,10 +10224,12 @@ spec:
                                       diskURI:
                                         type: string
                                       fsType:
+                                        default: ext4
                                         type: string
                                       kind:
                                         type: string
                                       readOnly:
+                                        default: false
                                         type: boolean
                                     required:
                                     - diskName
@@ -10509,6 +10629,7 @@ spec:
                                       iqn:
                                         type: string
                                       iscsiInterface:
+                                        default: default
                                         type: string
                                       lun:
                                         format: int32
@@ -10757,6 +10878,7 @@ spec:
                                       image:
                                         type: string
                                       keyring:
+                                        default: /etc/ceph/keyring
                                         type: string
                                       monitors:
                                         items:
@@ -10764,6 +10886,7 @@ spec:
                                         type: array
                                         x-kubernetes-list-type: atomic
                                       pool:
+                                        default: rbd
                                         type: string
                                       readOnly:
                                         type: boolean
@@ -10775,6 +10898,7 @@ spec:
                                         type: object
                                         x-kubernetes-map-type: atomic
                                       user:
+                                        default: admin
                                         type: string
                                     required:
                                     - image
@@ -10783,6 +10907,7 @@ spec:
                                   scaleIO:
                                     properties:
                                       fsType:
+                                        default: xfs
                                         type: string
                                       gateway:
                                         type: string
@@ -10800,6 +10925,7 @@ spec:
                                       sslEnabled:
                                         type: boolean
                                       storageMode:
+                                        default: ThinProvisioned
                                         type: string
                                       storagePool:
                                         type: string
@@ -11273,6 +11399,7 @@ spec:
                                             format: int32
                                             type: integer
                                           service:
+                                            default: ""
                                             type: string
                                         required:
                                         - port
@@ -11379,6 +11506,7 @@ spec:
                                             format: int32
                                             type: integer
                                           service:
+                                            default: ""
                                             type: string
                                         required:
                                         - port
@@ -11459,6 +11587,8 @@ spec:
                                         items:
                                           properties:
                                             name:
+                                              type: string
+                                            request:
                                               type: string
                                           required:
                                           - name
@@ -11577,6 +11707,7 @@ spec:
                                             format: int32
                                             type: integer
                                           service:
+                                            default: ""
                                             type: string
                                         required:
                                         - port
@@ -11975,6 +12106,7 @@ spec:
                                             format: int32
                                             type: integer
                                           service:
+                                            default: ""
                                             type: string
                                         required:
                                         - port
@@ -12081,6 +12213,7 @@ spec:
                                             format: int32
                                             type: integer
                                           service:
+                                            default: ""
                                             type: string
                                         required:
                                         - port
@@ -12161,6 +12294,8 @@ spec:
                                         items:
                                           properties:
                                             name:
+                                              type: string
+                                            request:
                                               type: string
                                           required:
                                           - name
@@ -12279,6 +12414,7 @@ spec:
                                             format: int32
                                             type: integer
                                           service:
+                                            default: ""
                                             type: string
                                         required:
                                         - port
@@ -12683,6 +12819,7 @@ spec:
                                             format: int32
                                             type: integer
                                           service:
+                                            default: ""
                                             type: string
                                         required:
                                         - port
@@ -12789,6 +12926,7 @@ spec:
                                             format: int32
                                             type: integer
                                           service:
+                                            default: ""
                                             type: string
                                         required:
                                         - port
@@ -12869,6 +13007,8 @@ spec:
                                         items:
                                           properties:
                                             name:
+                                              type: string
+                                            request:
                                               type: string
                                           required:
                                           - name
@@ -12987,6 +13127,7 @@ spec:
                                             format: int32
                                             type: integer
                                           service:
+                                            default: ""
                                             type: string
                                         required:
                                         - port
@@ -13181,6 +13322,8 @@ spec:
                                 runAsUser:
                                   format: int64
                                   type: integer
+                                seLinuxChangePolicy:
+                                  type: string
                                 seLinuxOptions:
                                   properties:
                                     level:
@@ -13207,6 +13350,8 @@ spec:
                                     type: integer
                                   type: array
                                   x-kubernetes-list-type: atomic
+                                supplementalGroupsPolicy:
+                                  type: string
                                 sysctls:
                                   items:
                                     properties:
@@ -13283,10 +13428,12 @@ spec:
                                       diskURI:
                                         type: string
                                       fsType:
+                                        default: ext4
                                         type: string
                                       kind:
                                         type: string
                                       readOnly:
+                                        default: false
                                         type: boolean
                                     required:
                                     - diskName
@@ -13686,6 +13833,7 @@ spec:
                                       iqn:
                                         type: string
                                       iscsiInterface:
+                                        default: default
                                         type: string
                                       lun:
                                         format: int32
@@ -13934,6 +14082,7 @@ spec:
                                       image:
                                         type: string
                                       keyring:
+                                        default: /etc/ceph/keyring
                                         type: string
                                       monitors:
                                         items:
@@ -13941,6 +14090,7 @@ spec:
                                         type: array
                                         x-kubernetes-list-type: atomic
                                       pool:
+                                        default: rbd
                                         type: string
                                       readOnly:
                                         type: boolean
@@ -13952,6 +14102,7 @@ spec:
                                         type: object
                                         x-kubernetes-map-type: atomic
                                       user:
+                                        default: admin
                                         type: string
                                     required:
                                     - image
@@ -13960,6 +14111,7 @@ spec:
                                   scaleIO:
                                     properties:
                                       fsType:
+                                        default: xfs
                                         type: string
                                       gateway:
                                         type: string
@@ -13977,6 +14129,7 @@ spec:
                                       sslEnabled:
                                         type: boolean
                                       storageMode:
+                                        default: ThinProvisioned
                                         type: string
                                       storagePool:
                                         type: string
@@ -14439,6 +14592,7 @@ spec:
                                             format: int32
                                             type: integer
                                           service:
+                                            default: ""
                                             type: string
                                         required:
                                         - port
@@ -14545,6 +14699,7 @@ spec:
                                             format: int32
                                             type: integer
                                           service:
+                                            default: ""
                                             type: string
                                         required:
                                         - port
@@ -14625,6 +14780,8 @@ spec:
                                         items:
                                           properties:
                                             name:
+                                              type: string
+                                            request:
                                               type: string
                                           required:
                                           - name
@@ -14743,6 +14900,7 @@ spec:
                                             format: int32
                                             type: integer
                                           service:
+                                            default: ""
                                             type: string
                                         required:
                                         - port
@@ -15141,6 +15299,7 @@ spec:
                                             format: int32
                                             type: integer
                                           service:
+                                            default: ""
                                             type: string
                                         required:
                                         - port
@@ -15247,6 +15406,7 @@ spec:
                                             format: int32
                                             type: integer
                                           service:
+                                            default: ""
                                             type: string
                                         required:
                                         - port
@@ -15327,6 +15487,8 @@ spec:
                                         items:
                                           properties:
                                             name:
+                                              type: string
+                                            request:
                                               type: string
                                           required:
                                           - name
@@ -15445,6 +15607,7 @@ spec:
                                             format: int32
                                             type: integer
                                           service:
+                                            default: ""
                                             type: string
                                         required:
                                         - port
@@ -15849,6 +16012,7 @@ spec:
                                             format: int32
                                             type: integer
                                           service:
+                                            default: ""
                                             type: string
                                         required:
                                         - port
@@ -15955,6 +16119,7 @@ spec:
                                             format: int32
                                             type: integer
                                           service:
+                                            default: ""
                                             type: string
                                         required:
                                         - port
@@ -16035,6 +16200,8 @@ spec:
                                         items:
                                           properties:
                                             name:
+                                              type: string
+                                            request:
                                               type: string
                                           required:
                                           - name
@@ -16153,6 +16320,7 @@ spec:
                                             format: int32
                                             type: integer
                                           service:
+                                            default: ""
                                             type: string
                                         required:
                                         - port
@@ -16347,6 +16515,8 @@ spec:
                                 runAsUser:
                                   format: int64
                                   type: integer
+                                seLinuxChangePolicy:
+                                  type: string
                                 seLinuxOptions:
                                   properties:
                                     level:
@@ -16373,6 +16543,8 @@ spec:
                                     type: integer
                                   type: array
                                   x-kubernetes-list-type: atomic
+                                supplementalGroupsPolicy:
+                                  type: string
                                 sysctls:
                                   items:
                                     properties:
@@ -16449,10 +16621,12 @@ spec:
                                       diskURI:
                                         type: string
                                       fsType:
+                                        default: ext4
                                         type: string
                                       kind:
                                         type: string
                                       readOnly:
+                                        default: false
                                         type: boolean
                                     required:
                                     - diskName
@@ -16852,6 +17026,7 @@ spec:
                                       iqn:
                                         type: string
                                       iscsiInterface:
+                                        default: default
                                         type: string
                                       lun:
                                         format: int32
@@ -17100,6 +17275,7 @@ spec:
                                       image:
                                         type: string
                                       keyring:
+                                        default: /etc/ceph/keyring
                                         type: string
                                       monitors:
                                         items:
@@ -17107,6 +17283,7 @@ spec:
                                         type: array
                                         x-kubernetes-list-type: atomic
                                       pool:
+                                        default: rbd
                                         type: string
                                       readOnly:
                                         type: boolean
@@ -17118,6 +17295,7 @@ spec:
                                         type: object
                                         x-kubernetes-map-type: atomic
                                       user:
+                                        default: admin
                                         type: string
                                     required:
                                     - image
@@ -17126,6 +17304,7 @@ spec:
                                   scaleIO:
                                     properties:
                                       fsType:
+                                        default: xfs
                                         type: string
                                       gateway:
                                         type: string
@@ -17143,6 +17322,7 @@ spec:
                                       sslEnabled:
                                         type: boolean
                                       storageMode:
+                                        default: ThinProvisioned
                                         type: string
                                       storagePool:
                                         type: string
@@ -17512,6 +17692,7 @@ spec:
                                             format: int32
                                             type: integer
                                           service:
+                                            default: ""
                                             type: string
                                         required:
                                         - port
@@ -17618,6 +17799,7 @@ spec:
                                             format: int32
                                             type: integer
                                           service:
+                                            default: ""
                                             type: string
                                         required:
                                         - port
@@ -17698,6 +17880,8 @@ spec:
                                         items:
                                           properties:
                                             name:
+                                              type: string
+                                            request:
                                               type: string
                                           required:
                                           - name
@@ -17816,6 +18000,7 @@ spec:
                                             format: int32
                                             type: integer
                                           service:
+                                            default: ""
                                             type: string
                                         required:
                                         - port
@@ -18214,6 +18399,7 @@ spec:
                                             format: int32
                                             type: integer
                                           service:
+                                            default: ""
                                             type: string
                                         required:
                                         - port
@@ -18320,6 +18506,7 @@ spec:
                                             format: int32
                                             type: integer
                                           service:
+                                            default: ""
                                             type: string
                                         required:
                                         - port
@@ -18400,6 +18587,8 @@ spec:
                                         items:
                                           properties:
                                             name:
+                                              type: string
+                                            request:
                                               type: string
                                           required:
                                           - name
@@ -18518,6 +18707,7 @@ spec:
                                             format: int32
                                             type: integer
                                           service:
+                                            default: ""
                                             type: string
                                         required:
                                         - port
@@ -18922,6 +19112,7 @@ spec:
                                             format: int32
                                             type: integer
                                           service:
+                                            default: ""
                                             type: string
                                         required:
                                         - port
@@ -19028,6 +19219,7 @@ spec:
                                             format: int32
                                             type: integer
                                           service:
+                                            default: ""
                                             type: string
                                         required:
                                         - port
@@ -19108,6 +19300,8 @@ spec:
                                         items:
                                           properties:
                                             name:
+                                              type: string
+                                            request:
                                               type: string
                                           required:
                                           - name
@@ -19226,6 +19420,7 @@ spec:
                                             format: int32
                                             type: integer
                                           service:
+                                            default: ""
                                             type: string
                                         required:
                                         - port
@@ -19420,6 +19615,8 @@ spec:
                                 runAsUser:
                                   format: int64
                                   type: integer
+                                seLinuxChangePolicy:
+                                  type: string
                                 seLinuxOptions:
                                   properties:
                                     level:
@@ -19446,6 +19643,8 @@ spec:
                                     type: integer
                                   type: array
                                   x-kubernetes-list-type: atomic
+                                supplementalGroupsPolicy:
+                                  type: string
                                 sysctls:
                                   items:
                                     properties:
@@ -19522,10 +19721,12 @@ spec:
                                       diskURI:
                                         type: string
                                       fsType:
+                                        default: ext4
                                         type: string
                                       kind:
                                         type: string
                                       readOnly:
+                                        default: false
                                         type: boolean
                                     required:
                                     - diskName
@@ -19925,6 +20126,7 @@ spec:
                                       iqn:
                                         type: string
                                       iscsiInterface:
+                                        default: default
                                         type: string
                                       lun:
                                         format: int32
@@ -20173,6 +20375,7 @@ spec:
                                       image:
                                         type: string
                                       keyring:
+                                        default: /etc/ceph/keyring
                                         type: string
                                       monitors:
                                         items:
@@ -20180,6 +20383,7 @@ spec:
                                         type: array
                                         x-kubernetes-list-type: atomic
                                       pool:
+                                        default: rbd
                                         type: string
                                       readOnly:
                                         type: boolean
@@ -20191,6 +20395,7 @@ spec:
                                         type: object
                                         x-kubernetes-map-type: atomic
                                       user:
+                                        default: admin
                                         type: string
                                     required:
                                     - image
@@ -20199,6 +20404,7 @@ spec:
                                   scaleIO:
                                     properties:
                                       fsType:
+                                        default: xfs
                                         type: string
                                       gateway:
                                         type: string
@@ -20216,6 +20422,7 @@ spec:
                                       sslEnabled:
                                         type: boolean
                                       storageMode:
+                                        default: ThinProvisioned
                                         type: string
                                       storagePool:
                                         type: string
