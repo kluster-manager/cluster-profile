@@ -31,6 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilrand "k8s.io/apimachinery/pkg/util/rand"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 )
 
 func (s *Server) Create(w http.ResponseWriter, r *http.Request) {
@@ -60,17 +61,34 @@ func (s *Server) CreateImpl(store *APIStorage, codec runtime.Codec, r *http.Requ
 		return nil, err
 	}
 
-	var obj unstructured.Unstructured
-	_, _, err = codec.Decode(data, &store.GVK, &obj)
+	isOfficialType := clientgoscheme.Scheme.IsGroupRegistered(store.GVK.Group)
+
+	var into runtime.Object
+	if !isOfficialType {
+		var u unstructured.Unstructured
+		u.SetGroupVersionKind(store.GVK)
+		into = &u
+	}
+	o2, _, err := codec.Decode(data, &store.GVK, into)
 	if err != nil {
 		return nil, err
 	}
-	if obj.GetGenerateName() != "" {
-		obj.SetName(fmt.Sprintf("%s-%s", obj.GetGenerateName(), utilrand.String(6)))
+
+	var obj unstructured.Unstructured
+	if isOfficialType {
+		content, err := runtime.DefaultUnstructuredConverter.ToUnstructured(o2)
+		if err != nil {
+			return nil, err
+		}
+
+		obj.SetGroupVersionKind(store.GVK)
+		obj.SetUnstructuredContent(content)
+	} else {
+		obj = *into.(*unstructured.Unstructured)
 	}
 
-	if obj.GetName() == "kubedb" {
-		fmt.Println("wait")
+	if obj.GetGenerateName() != "" {
+		obj.SetName(fmt.Sprintf("%s-%s", obj.GetGenerateName(), utilrand.String(6)))
 	}
 
 	if store.Namespaced {
