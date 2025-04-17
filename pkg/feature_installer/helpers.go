@@ -23,6 +23,8 @@ import (
 	"net/http"
 	"time"
 
+	profilev1alpha1 "github.com/kluster-manager/cluster-profile/apis/profile/v1alpha1"
+	"github.com/kluster-manager/cluster-profile/pkg/common"
 	"github.com/kluster-manager/cluster-profile/pkg/utils"
 
 	fluxhelm "github.com/fluxcd/helm-controller/api/v2"
@@ -203,7 +205,7 @@ func waitForReleaseToBeCreated(kc client.Client, name []string) error {
 	})
 }
 
-func updateManifestWork(ctx context.Context, fakeServer *FakeServer, kc client.Client, mw *workv1.ManifestWork) error {
+func updateManifestWork(ctx context.Context, fakeServer *FakeServer, kc client.Client, mw *workv1.ManifestWork, profile *profilev1alpha1.ManagedClusterSetProfile) error {
 	logger := log.FromContext(ctx)
 	// fake-apiserver shutdown
 	if err := fakeServer.FakeSrv.Shutdown(ctx); err != nil {
@@ -265,6 +267,11 @@ func updateManifestWork(ctx context.Context, fakeServer *FakeServer, kc client.C
 	mw.Spec.ManifestConfigs = configOptions
 	_, err := cu.CreateOrPatch(ctx, kc, mw, func(obj client.Object, createOp bool) client.Object {
 		in := obj.(*workv1.ManifestWork)
+		if in.Labels == nil {
+			in.Labels = map[string]string{}
+		}
+		in.Labels[common.ProfileLabel] = profile.Name
+		in.Labels[common.LabelAceFeatureSet] = "true"
 		in.Spec = mw.Spec
 		return in
 	})

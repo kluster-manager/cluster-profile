@@ -282,7 +282,7 @@ func applyFeatureSet(ctx context.Context, kc client.Client, mw *workv1.ManifestW
 		return err
 	}
 
-	if err = updateManifestWork(ctx, fakeServer, kc, mw); err != nil {
+	if err = updateManifestWork(ctx, fakeServer, kc, mw, profile); err != nil {
 		return err
 	}
 	return nil
