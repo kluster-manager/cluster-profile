@@ -21,6 +21,7 @@ import (
 	pkgerr "errors"
 	"fmt"
 	"net/http"
+	"sort"
 	"time"
 
 	profilev1alpha1 "github.com/kluster-manager/cluster-profile/apis/profile/v1alpha1"
@@ -270,7 +271,7 @@ func updateManifestWork(ctx context.Context, fakeServer *FakeServer, kc client.C
 		if in.Labels == nil {
 			in.Labels = map[string]string{}
 		}
-		in.Labels[common.ProfileLabel] = profile.Name
+		in.Labels[kmapi.ClusterProfileLabel] = profile.Name
 		in.Labels[common.LabelAceFeatureSet] = "true"
 		in.Spec = mw.Spec
 		return in
@@ -363,9 +364,7 @@ func sanitizeFeatures(kc client.Client, clusterName string, features []string) (
 		return nil, err
 	}
 
-	featureExclusionTracker := make(map[string]bool)    // Tracks if an exclusion group already has an enabled feature
 	exclusionGroupFeatures := make(map[string][]string) // Tracks features by their exclusion group
-
 	var featureList uiapi.FeatureList
 	if err = kc.List(context.Background(), &featureList); err != nil {
 		return nil, err
@@ -375,12 +374,12 @@ func sanitizeFeatures(kc client.Client, clusterName string, features []string) (
 		if exclusionGroup != "" {
 			// Mark the exclusion group as having an enabled feature if this feature is enabled
 			if strings.Contains(featuresMap.EnabledFeatures, f.Name) {
-				featureExclusionTracker[exclusionGroup] = true
 				exclusionGroupFeatures[exclusionGroup] = append(exclusionGroupFeatures[exclusionGroup], f.Name)
 			}
 		}
 	}
 
+	sort.Strings(features)
 	var sanitizedFeatures []string
 	for _, f := range features {
 		var feature uiapi.Feature
@@ -388,15 +387,18 @@ func sanitizeFeatures(kc client.Client, clusterName string, features []string) (
 			return nil, err
 		}
 
-		exclusionGroup := feature.Spec.FeatureExclusionGroup
-		// Skip if an exclusion group already has an enabled feature or features are already present
-		if exclusionGroup != "" {
-			if featureExclusionTracker[exclusionGroup] || len(exclusionGroupFeatures[exclusionGroup]) > 0 {
-				continue
-			}
+		if strings.Contains(featuresMap.ExternallyManagedFeatures, f) || strings.Contains(featuresMap.DisabledFeatures, f) {
+			continue
 		}
 
-		if strings.Contains(featuresMap.ExternallyManagedFeatures, f) || strings.Contains(featuresMap.DisabledFeatures, f) {
+		exclusionGroup := feature.Spec.FeatureExclusionGroup
+		// Skip if an exclusion group already has an enabled feature or features are already present
+		exist, err := existInManifestWork(kc, clusterName, feature.Spec.FeatureSet, feature.Name)
+		if err != nil {
+			return nil, err
+		}
+
+		if exclusionGroup != "" && len(exclusionGroupFeatures[exclusionGroup]) > 0 && !exist {
 			continue
 		}
 
@@ -423,4 +425,23 @@ func getFeatureStatus(cluster *v1.ManagedCluster) (*kmapi.ClusterClaimFeatures, 
 	}
 
 	return nil, pkgerr.New("features cluster claim not found")
+}
+
+func existInManifestWork(kc client.Client, clusterName, fSetName, featureName string) (bool, error) {
+	var mw workv1.ManifestWork
+	err := kc.Get(context.Background(), client.ObjectKey{Name: fSetName, Namespace: clusterName}, &mw)
+	if err != nil && !errors.IsNotFound(err) {
+		return false, err
+	}
+
+	for _, m := range mw.Spec.Workload.Manifests {
+		hr := fluxhelm.HelmRelease{}
+		if err = utils.Copy(m, &hr); err != nil {
+			return false, err
+		}
+		if hr.Name == featureName {
+			return true, nil
+		}
+	}
+	return false, nil
 }

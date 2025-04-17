@@ -19,7 +19,6 @@ package common
 const (
 	ClusterClaimClusterInfo = "cluster.ace.info"
 	LabelAceFeatureSet      = "featureset.appscode.com/managed"
-	ProfileLabel            = "profile.appscode.com/name"
 
 	ACEUpgrader        = "ace.cloud.com/upgrader"
 	ACEUpgraderVersion = "ace.cloud.com/version"
