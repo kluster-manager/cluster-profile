@@ -151,6 +151,7 @@ func (in *ManagedClusterProfileBindingStatus) DeepCopyInto(out *ManagedClusterPr
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	in.LastUpgradeAt.DeepCopyInto(&out.LastUpgradeAt)
 	return
 }
 

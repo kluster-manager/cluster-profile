@@ -19,16 +19,20 @@ package controller
 import (
 	"context"
 	"fmt"
+	"time"
 
 	profilev1alpha1 "github.com/kluster-manager/cluster-profile/apis/profile/v1alpha1"
 	"github.com/kluster-manager/cluster-profile/pkg/cluster_upgrade"
+	"github.com/kluster-manager/cluster-profile/pkg/common"
 	"github.com/kluster-manager/cluster-profile/pkg/feature_installer"
 	"github.com/kluster-manager/cluster-profile/pkg/utils"
 
 	fluxhelm "github.com/fluxcd/helm-controller/api/v2"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"kmodules.xyz/resource-metadata/hub"
 	workv1 "open-cluster-management.io/api/work/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -81,17 +85,48 @@ func (r *ManagedClusterProfileBindingReconciler) Reconcile(ctx context.Context, 
 		featureInfo[val.FeatureSet] = append(featureInfo[val.FeatureSet], f)
 	}
 
-	if profileBinding.Spec.OpscenterFeaturesVersion != "" && profileBinding.Spec.OpscenterFeaturesVersion != profileBinding.Status.ObservedOpscenterFeaturesVersion {
+	var upgradeTime string
+	if profileBinding.Annotations != nil {
+		upgradeTime = profileBinding.Annotations[common.UpgradeAnnotation]
+	}
+	if r.needsUpgrade(profileBinding) {
+		logger.Info("Triggering cluster upgrade")
 		if err := cluster_upgrade.UpgradeCluster(profileBinding, profile, r.Client); err != nil {
-			return reconcile.Result{}, r.setOpscenterFeaturesVersion(ctx, profileBinding, err)
+			return reconcile.Result{}, r.setOpscenterFeaturesVersion(ctx, profileBinding, upgradeTime, err)
 		}
-	} else if profile.Spec.Features["opscenter-features"].Chart.Version == profileBinding.Spec.OpscenterFeaturesVersion || profileBinding.Spec.OpscenterFeaturesVersion == "" {
+	} else if r.shouldEnableFeatures(profileBinding, profile) {
+		logger.Info("Enabling features")
 		if err = feature_installer.EnableFeatures(ctx, r.Client, profileBinding, featureInfo, profile); err != nil {
-			return reconcile.Result{}, r.setOpscenterFeaturesVersion(ctx, profileBinding, err)
+			return reconcile.Result{}, r.setOpscenterFeaturesVersion(ctx, profileBinding, upgradeTime, err)
 		}
 	}
 
-	return reconcile.Result{}, r.setOpscenterFeaturesVersion(ctx, profileBinding, nil)
+	return reconcile.Result{}, r.setOpscenterFeaturesVersion(ctx, profileBinding, upgradeTime, nil)
+}
+
+// needsUpgrade checks if a cluster upgrade is required.
+func (r *ManagedClusterProfileBindingReconciler) needsUpgrade(pb *profilev1alpha1.ManagedClusterProfileBinding) bool {
+	// Check version mismatch
+	if pb.Spec.OpscenterFeaturesVersion != "" && pb.Spec.OpscenterFeaturesVersion != pb.Status.ObservedOpscenterFeaturesVersion {
+		return true
+	}
+	// Check upgrade annotation
+	upgradeTime, exists := pb.Annotations[common.UpgradeAnnotation]
+	if !exists || upgradeTime == "" {
+		return false
+	}
+	// Validate timestamp format
+	parsedTime, err := time.Parse(time.RFC3339, upgradeTime)
+	if err != nil {
+		log.FromContext(context.Background()).Error(err, "Invalid force-upgrade timestamp", "value", upgradeTime)
+		return false
+	}
+	return !pb.Status.LastUpgradeAt.Time.Equal(parsedTime)
+}
+
+// shouldEnableFeatures checks if features need to be enabled.
+func (r *ManagedClusterProfileBindingReconciler) shouldEnableFeatures(pb *profilev1alpha1.ManagedClusterProfileBinding, p *profilev1alpha1.ManagedClusterSetProfile) bool {
+	return p.Spec.Features[hub.ChartOpscenterFeatures].Chart.Version == pb.Spec.OpscenterFeaturesVersion || pb.Spec.OpscenterFeaturesVersion == ""
 }
 
 func (r *ManagedClusterProfileBindingReconciler) mapClusterProfileToClusterProfileBinding(ctx context.Context, obj client.Object) []reconcile.Request {
@@ -124,7 +159,7 @@ func (r *ManagedClusterProfileBindingReconciler) mapClusterProfileToClusterProfi
 	return requests
 }
 
-func (r *ManagedClusterProfileBindingReconciler) setOpscenterFeaturesVersion(ctx context.Context, profileBinding *profilev1alpha1.ManagedClusterProfileBinding, err error) error {
+func (r *ManagedClusterProfileBindingReconciler) setOpscenterFeaturesVersion(ctx context.Context, profileBinding *profilev1alpha1.ManagedClusterProfileBinding, upgradeTime string, err error) error {
 	var pb profilev1alpha1.ManagedClusterProfileBinding
 	// Re-fetch the latest version of the Account object
 	if err := r.Client.Get(ctx, client.ObjectKeyFromObject(profileBinding), &pb); err != nil && !errors.IsNotFound(err) {
@@ -132,6 +167,14 @@ func (r *ManagedClusterProfileBindingReconciler) setOpscenterFeaturesVersion(ctx
 	}
 
 	pb.Status.ObservedOpscenterFeaturesVersion = setOpscenterFeaturesVersion(ctx, r.Client, pb.Namespace)
+	if upgradeTime != "" {
+		parsedTime, err := time.Parse(time.RFC3339, profileBinding.Annotations[common.UpgradeAnnotation])
+		if err != nil {
+			return fmt.Errorf("invalid force-upgrade timestamp, skipping update. error: %w", err)
+		} else {
+			pb.Status.LastUpgradeAt = metav1.Time{Time: parsedTime}
+		}
+	}
 	if updateErr := r.Client.Status().Update(ctx, &pb); updateErr != nil {
 		return fmt.Errorf("failed to update status to Failed: %w", updateErr)
 	}

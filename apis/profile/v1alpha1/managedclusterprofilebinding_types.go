@@ -58,6 +58,8 @@ type ManagedClusterProfileBindingStatus struct {
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 	// +optional
 	ObservedOpscenterFeaturesVersion string `json:"observedOpscenterFeaturesVersion,omitempty"`
+	// +optional
+	LastUpgradeAt metav1.Time `json:"lastUpgradeAt,omitempty"`
 }
 
 // +genclient
