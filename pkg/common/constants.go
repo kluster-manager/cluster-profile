@@ -20,6 +20,7 @@ const (
 	ClusterClaimClusterInfo = "cluster.ace.info"
 	LabelAceFeatureSet      = "featureset.appscode.com/managed"
 
-	ACEUpgrader        = "ace.cloud.com/upgrader"
-	ACEUpgraderVersion = "ace.cloud.com/version"
+	ACEUpgrader            = "ace.cloud.com/upgrader"
+	ACEUpgraderVersion     = "ace.cloud.com/version"
+	ForceUpgradeAnnotation = "ace.cloud.com/force-upgradeAt"
 )

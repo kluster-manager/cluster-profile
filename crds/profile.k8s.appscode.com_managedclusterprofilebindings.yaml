@@ -177,6 +177,8 @@ spec:
                   - type
                   type: object
                 type: array
+              lastHandledForceUpgradeAt:
+                type: string
               observedGeneration:
                 format: int64
                 type: integer
