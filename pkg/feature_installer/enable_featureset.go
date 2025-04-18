@@ -139,7 +139,7 @@ func enableFeatureSet(ctx context.Context, kc client.Client, featureSet string, 
 			Namespace: profileBinding.Namespace,
 			Labels: map[string]string{
 				common.LabelAceFeatureSet: "true",
-				common.ProfileLabel:       profile.Name,
+				kmapi.ClusterProfileLabel: profile.Name,
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				*metav1.NewControllerRef(profileBinding, profilev1alpha1.SchemeGroupVersion.WithKind(profilev1alpha1.ResourceKindManagedClusterProfileBinding)),
@@ -282,7 +282,7 @@ func applyFeatureSet(ctx context.Context, kc client.Client, mw *workv1.ManifestW
 		return err
 	}
 
-	if err = updateManifestWork(ctx, fakeServer, kc, mw); err != nil {
+	if err = updateManifestWork(ctx, fakeServer, kc, mw, profile); err != nil {
 		return err
 	}
 	return nil

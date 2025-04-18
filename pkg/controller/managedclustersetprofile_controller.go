@@ -20,13 +20,13 @@ import (
 	"context"
 
 	profilev1alpha1 "github.com/kluster-manager/cluster-profile/apis/profile/v1alpha1"
-	"github.com/kluster-manager/cluster-profile/pkg/common"
 
 	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	kmapi "kmodules.xyz/client-go/api/v1"
 	cu "kmodules.xyz/client-go/client"
 	clusterv1 "open-cluster-management.io/api/cluster/v1"
 	clusterv1beta2 "open-cluster-management.io/api/cluster/v1beta2"
@@ -100,7 +100,7 @@ func (r *ManagedClusterSetProfileReconciler) Reconcile(ctx context.Context, req 
 				Name:      cluster.Name,
 				Namespace: cluster.Name,
 				Labels: map[string]string{
-					common.ProfileLabel: profile.Name,
+					kmapi.ClusterProfileLabel: profile.Name,
 				},
 				OwnerReferences: []metav1.OwnerReference{
 					*metav1.NewControllerRef(profile, profilev1alpha1.SchemeGroupVersion.WithKind(profilev1alpha1.ResourceKindManagedClusterSetProfile)),
