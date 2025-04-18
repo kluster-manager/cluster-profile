@@ -24,7 +24,7 @@ BIN      := cluster-profile
 COMPRESS ?= no
 
 CRD_OPTIONS          ?= "crd:maxDescLen=0,generateEmbeddedObjectMeta=true,allowDangerousTypes=true"
-CODE_GENERATOR_IMAGE ?= ghcr.io/appscode/gengo:release-1.29
+CODE_GENERATOR_IMAGE ?= ghcr.io/appscode/gengo:release-1.32
 API_GROUPS           ?= profile:v1alpha1
 
 # Where to push the docker image.
