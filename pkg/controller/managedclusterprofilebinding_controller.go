@@ -19,9 +19,11 @@ package controller
 import (
 	"context"
 	"fmt"
+	"time"
 
 	profilev1alpha1 "github.com/kluster-manager/cluster-profile/apis/profile/v1alpha1"
 	"github.com/kluster-manager/cluster-profile/pkg/cluster_upgrade"
+	"github.com/kluster-manager/cluster-profile/pkg/common"
 	"github.com/kluster-manager/cluster-profile/pkg/feature_installer"
 	"github.com/kluster-manager/cluster-profile/pkg/utils"
 
@@ -29,6 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"kmodules.xyz/resource-metadata/hub"
 	workv1 "open-cluster-management.io/api/work/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -81,17 +84,55 @@ func (r *ManagedClusterProfileBindingReconciler) Reconcile(ctx context.Context, 
 		featureInfo[val.FeatureSet] = append(featureInfo[val.FeatureSet], f)
 	}
 
-	if profileBinding.Spec.OpscenterFeaturesVersion != "" && profileBinding.Spec.OpscenterFeaturesVersion != profileBinding.Status.ObservedOpscenterFeaturesVersion {
-		if err := cluster_upgrade.UpgradeCluster(profileBinding, profile, r.Client); err != nil {
-			return reconcile.Result{}, r.setOpscenterFeaturesVersion(ctx, profileBinding, err)
+	forceUpgraded := false
+	if r.needsUpgrade(profileBinding) {
+		if r.forceUpgraded(profileBinding) {
+			forceUpgraded = true
 		}
-	} else if profile.Spec.Features["opscenter-features"].Chart.Version == profileBinding.Spec.OpscenterFeaturesVersion || profileBinding.Spec.OpscenterFeaturesVersion == "" {
+		logger.Info("Triggering cluster upgrade")
+		if err := cluster_upgrade.UpgradeCluster(profileBinding, profile, r.Client); err != nil {
+			if r.forceUpgraded(profileBinding) {
+				return reconcile.Result{}, r.setOpscenterFeaturesVersion(ctx, profileBinding, forceUpgraded, err)
+			}
+			return reconcile.Result{}, r.setOpscenterFeaturesVersion(ctx, profileBinding, forceUpgraded, err)
+		}
+	} else if r.shouldEnableFeatures(profileBinding, profile) {
+		logger.Info("Enabling features")
 		if err = feature_installer.EnableFeatures(ctx, r.Client, profileBinding, featureInfo, profile); err != nil {
-			return reconcile.Result{}, r.setOpscenterFeaturesVersion(ctx, profileBinding, err)
+			return reconcile.Result{}, r.setOpscenterFeaturesVersion(ctx, profileBinding, forceUpgraded, err)
 		}
 	}
 
-	return reconcile.Result{}, r.setOpscenterFeaturesVersion(ctx, profileBinding, nil)
+	return reconcile.Result{}, r.setOpscenterFeaturesVersion(ctx, profileBinding, forceUpgraded, nil)
+}
+
+// needsUpgrade checks if a cluster upgrade is required.
+func (r *ManagedClusterProfileBindingReconciler) needsUpgrade(pb *profilev1alpha1.ManagedClusterProfileBinding) bool {
+	// Check version mismatch
+	if pb.Spec.OpscenterFeaturesVersion != "" && pb.Spec.OpscenterFeaturesVersion != pb.Status.ObservedOpscenterFeaturesVersion {
+		return true
+	}
+	// Check force-upgrade label
+	forceUpgradeTime, exists := pb.Annotations[common.ForceUpgradeAnnotation]
+	if !exists || forceUpgradeTime == "" {
+		return false
+	}
+	// Validate timestamp format
+	if _, err := time.Parse(time.RFC3339Nano, forceUpgradeTime); err != nil {
+		log.FromContext(context.Background()).Error(err, "Invalid force-upgrade timestamp", "value", forceUpgradeTime)
+		return false
+	}
+	return forceUpgradeTime != pb.Status.LastHandledForceUpgradeAt
+}
+
+// shouldEnableFeatures checks if features need to be enabled.
+func (r *ManagedClusterProfileBindingReconciler) shouldEnableFeatures(pb *profilev1alpha1.ManagedClusterProfileBinding, p *profilev1alpha1.ManagedClusterSetProfile) bool {
+	return p.Spec.Features[hub.ChartOpscenterFeatures].Chart.Version == pb.Spec.OpscenterFeaturesVersion || pb.Spec.OpscenterFeaturesVersion == ""
+}
+
+// forceUpgraded checks if label and status mismatched
+func (r *ManagedClusterProfileBindingReconciler) forceUpgraded(pb *profilev1alpha1.ManagedClusterProfileBinding) bool {
+	return pb.Annotations[common.ForceUpgradeAnnotation] != pb.Status.LastHandledForceUpgradeAt
 }
 
 func (r *ManagedClusterProfileBindingReconciler) mapClusterProfileToClusterProfileBinding(ctx context.Context, obj client.Object) []reconcile.Request {
@@ -124,7 +165,7 @@ func (r *ManagedClusterProfileBindingReconciler) mapClusterProfileToClusterProfi
 	return requests
 }
 
-func (r *ManagedClusterProfileBindingReconciler) setOpscenterFeaturesVersion(ctx context.Context, profileBinding *profilev1alpha1.ManagedClusterProfileBinding, err error) error {
+func (r *ManagedClusterProfileBindingReconciler) setOpscenterFeaturesVersion(ctx context.Context, profileBinding *profilev1alpha1.ManagedClusterProfileBinding, forceUpgraded bool, err error) error {
 	var pb profilev1alpha1.ManagedClusterProfileBinding
 	// Re-fetch the latest version of the Account object
 	if err := r.Client.Get(ctx, client.ObjectKeyFromObject(profileBinding), &pb); err != nil && !errors.IsNotFound(err) {
@@ -132,6 +173,13 @@ func (r *ManagedClusterProfileBindingReconciler) setOpscenterFeaturesVersion(ctx
 	}
 
 	pb.Status.ObservedOpscenterFeaturesVersion = setOpscenterFeaturesVersion(ctx, r.Client, pb.Namespace)
+	if forceUpgraded {
+		if _, err := time.Parse(time.RFC3339Nano, profileBinding.Annotations[common.ForceUpgradeAnnotation]); err != nil {
+			return fmt.Errorf("invalid force-upgrade timestamp, skipping update. error: %w", err)
+		} else {
+			pb.Status.LastHandledForceUpgradeAt = profileBinding.Annotations[common.ForceUpgradeAnnotation]
+		}
+	}
 	if updateErr := r.Client.Status().Update(ctx, &pb); updateErr != nil {
 		return fmt.Errorf("failed to update status to Failed: %w", updateErr)
 	}
