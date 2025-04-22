@@ -45,6 +45,7 @@ import (
 
 func UpgradeCluster(profileBinding *profilev1alpha1.ManagedClusterProfileBinding, profile *profilev1alpha1.ManagedClusterSetProfile, kc client.Client) error {
 	logger := klog.FromContext(context.Background())
+
 	logger.Info(fmt.Sprintf("Upgrading Cluster: %s", profileBinding.Namespace))
 
 	var fakeServer *feature_installer.FakeServer
