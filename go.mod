@@ -10,6 +10,7 @@ require (
 	github.com/google/gofuzz v1.2.0
 	github.com/spf13/cobra v1.8.1
 	go.bytebuilders.dev/license-verifier v0.14.6
+	gomodules.xyz/encoding v0.0.8
 	gomodules.xyz/logs v0.0.7
 	gomodules.xyz/x v0.0.17
 	helm.sh/helm/v3 v3.17.3
@@ -22,14 +23,14 @@ require (
 	k8s.io/kube-openapi v0.0.0-20250318172550-b98be4ee1595
 	k8s.io/kubectl v0.32.2
 	k8s.io/utils v0.0.0-20241210054802-24370beab758
-	kmodules.xyz/client-go v0.32.1
+	kmodules.xyz/client-go v0.32.4
 	kmodules.xyz/fake-apiserver v0.0.6
 	kmodules.xyz/resource-metadata v0.28.0
 	kubepack.dev/lib-app v0.5.0
 	kubepack.dev/lib-helm v0.32.1
 	open-cluster-management.io/api v0.16.0
 	open-cluster-management.io/sdk-go v0.16.0
-	sigs.k8s.io/controller-runtime v0.20.3
+	sigs.k8s.io/controller-runtime v0.20.4
 	sigs.k8s.io/yaml v1.4.0
 	x-helm.dev/apimachinery v0.0.17
 )
@@ -254,7 +255,6 @@ require (
 	golang.org/x/xerrors v0.0.0-20240716161551-93cc26a95ae9 // indirect
 	gomodules.xyz/blobfs v0.2.2 // indirect
 	gomodules.xyz/clock v0.0.0-20200817085942-06523dba733f // indirect
-	gomodules.xyz/encoding v0.0.8 // indirect
 	gomodules.xyz/flags v0.1.3 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.5.0 // indirect
 	gomodules.xyz/jsonpatch/v3 v3.0.1 // indirect

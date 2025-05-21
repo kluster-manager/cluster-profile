@@ -29,7 +29,7 @@ import (
 	"github.com/kluster-manager/cluster-profile/pkg/utils"
 
 	fluxhelm "github.com/fluxcd/helm-controller/api/v2"
-	"gomodules.xyz/x/strings"
+	gomod_strings "gomodules.xyz/x/strings"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -373,7 +373,7 @@ func sanitizeFeatures(kc client.Client, clusterName string, features []string) (
 		exclusionGroup := f.Spec.FeatureExclusionGroup
 		if exclusionGroup != "" {
 			// Mark the exclusion group as having an enabled feature if this feature is enabled
-			if strings.Contains(featuresMap.EnabledFeatures, f.Name) {
+			if gomod_strings.Contains(featuresMap.EnabledFeatures, f.Name) {
 				exclusionGroupFeatures[exclusionGroup] = append(exclusionGroupFeatures[exclusionGroup], f.Name)
 			}
 		}
@@ -387,7 +387,7 @@ func sanitizeFeatures(kc client.Client, clusterName string, features []string) (
 			return nil, err
 		}
 
-		if strings.Contains(featuresMap.ExternallyManagedFeatures, f) || strings.Contains(featuresMap.DisabledFeatures, f) {
+		if gomod_strings.Contains(featuresMap.ExternallyManagedFeatures, f) || gomod_strings.Contains(featuresMap.DisabledFeatures, f) {
 			continue
 		}
 

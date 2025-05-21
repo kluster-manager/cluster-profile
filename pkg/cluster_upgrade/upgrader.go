@@ -77,8 +77,7 @@ func UpgradeCluster(profileBinding *profilev1alpha1.ManagedClusterProfileBinding
 		return err
 	}
 
-	err = resources.RegisterCRDs(fakeServer.FakeRestConfig)
-	if err != nil {
+	if err := resources.RegisterCRDs(fakeServer.FakeRestConfig); err != nil {
 		return err
 	}
 

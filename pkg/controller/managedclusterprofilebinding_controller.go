@@ -81,9 +81,18 @@ func (r *ManagedClusterProfileBindingReconciler) Reconcile(ctx context.Context, 
 	}
 
 	featureInfo := make(map[string][]string)
-	for f, val := range profile.Spec.Features {
-		featureInfo[val.FeatureSet] = append(featureInfo[val.FeatureSet], f)
+	featurePushed := make(map[string]bool)
+	addFeatures := func(features map[string]profilev1alpha1.FeatureSpec) {
+		for name, spec := range features {
+			if !featurePushed[name] {
+				featureInfo[spec.FeatureSet] = append(featureInfo[spec.FeatureSet], name)
+				featurePushed[name] = true
+			}
+		}
 	}
+
+	addFeatures(profileBinding.Spec.Features)
+	addFeatures(profile.Spec.Features)
 
 	var upgradeTime string
 	if profileBinding.Annotations != nil {
