@@ -128,7 +128,7 @@ func enableFeatureSet(ctx context.Context, kc client.Client, featureSet string, 
 	// <<<<<<<<       start fake-apiserver and apply base manifestWorkReplicaSet, feature-namespace manifestWork and helm install 'opscenter-features' chart       >>>>>>>
 	var err error
 	var fakeServer *FakeServer
-	if fakeServer, err = StartFakeApiServerAndApplyBaseManifestWorkReplicaSets(ctx, kc); err != nil {
+	if fakeServer, err = StartFakeApiServerAndApplyBaseManifestWorkReplicaSets(ctx, kc, profileBinding); err != nil {
 		return err
 	}
 
