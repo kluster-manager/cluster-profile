@@ -35,6 +35,7 @@ import (
 	workv1alpha1 "open-cluster-management.io/api/work/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
+	driversapi "x-helm.dev/apimachinery/apis/drivers/v1alpha1"
 )
 
 var scheme = runtime.NewScheme()
@@ -50,6 +51,7 @@ func init() {
 	utilruntime.Must(uiapi.AddToScheme(scheme))
 	utilruntime.Must(workv1.Install(scheme))
 	utilruntime.Must(workv1alpha1.Install(scheme))
+	utilruntime.Must(driversapi.AddToScheme(scheme))
 }
 
 func GetNewRuntimeClient(restConfig *rest.Config) (client.Client, error) {

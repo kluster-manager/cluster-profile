@@ -32,7 +32,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/json"
 	cu "kmodules.xyz/client-go/client"
-	"kmodules.xyz/fake-apiserver/pkg/resources"
 	uiapi "kmodules.xyz/resource-metadata/apis/ui/v1alpha1"
 	"kmodules.xyz/resource-metadata/hub"
 	"kubepack.dev/lib-helm/pkg/repo"
@@ -77,8 +76,7 @@ func UpgradeCluster(profileBinding *profilev1alpha1.ManagedClusterProfileBinding
 		return err
 	}
 
-	err = resources.RegisterCRDs(fakeServer.FakeRestConfig)
-	if err != nil {
+	if err := feature_installer.RegisterRequiredCRDs(fakeServer, profileBinding); err != nil {
 		return err
 	}
 

@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"slices"
 
 	profilev1alpha1 "github.com/kluster-manager/cluster-profile/apis/profile/v1alpha1"
 
@@ -126,6 +127,14 @@ func (r *ManagedClusterSetProfileReconciler) Reconcile(ctx context.Context, req 
 			profileBinding.Spec.Features = profileBindingList.Items[0].Spec.Features
 		}
 
+		if profileBinding.Spec.Features == nil {
+			profileBinding.Spec.Features = make(map[string]profilev1alpha1.FeatureSpec)
+		}
+		if slices.Contains(clusterMetadata.ClusterManagers, kmapi.ClusterManagerOpenShift.Name()) {
+			profileBinding.Spec.Features["aceshifter"] = profilev1alpha1.FeatureSpec{
+				FeatureSet: "opscenter-core",
+			}
+		}
 		_, err = cu.CreateOrPatch(context.Background(), r.Client, profileBinding, func(obj client.Object, createOp bool) client.Object {
 			in := obj.(*profilev1alpha1.ManagedClusterProfileBinding)
 			in.Labels = profileBinding.Labels

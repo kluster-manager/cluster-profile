@@ -29,7 +29,8 @@ import (
 	"github.com/kluster-manager/cluster-profile/pkg/utils"
 
 	fluxhelm "github.com/fluxcd/helm-controller/api/v2"
-	"gomodules.xyz/x/strings"
+	go_str "gomodules.xyz/x/strings"
+	crdv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -41,9 +42,11 @@ import (
 	"k8s.io/client-go/tools/clientcmd/api"
 	"k8s.io/klog/v2"
 	kmapi "kmodules.xyz/client-go/api/v1"
+	"kmodules.xyz/client-go/apiextensions"
 	cu "kmodules.xyz/client-go/client"
 	"kmodules.xyz/client-go/tools/clientcmd"
 	"kmodules.xyz/fake-apiserver/pkg"
+	"kmodules.xyz/fake-apiserver/pkg/resources"
 	uiapi "kmodules.xyz/resource-metadata/apis/ui/v1alpha1"
 	"kmodules.xyz/resource-metadata/hub"
 	"kubepack.dev/lib-helm/pkg/repo"
@@ -53,6 +56,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/yaml"
+	driversapi "x-helm.dev/apimachinery/apis/drivers/v1alpha1"
 	releasesapi "x-helm.dev/apimachinery/apis/releases/v1alpha1"
 )
 
@@ -64,6 +68,8 @@ const (
 	addonNamespace    = "open-cluster-management-addon"
 	mwrsNameNamespace = "ace-namespace"
 	mwrsNameBootstrap = "ace-bootstrap"
+
+	fakeProjectCRDName = "projects.project.openshift.io"
 )
 
 type FakeServer struct {
@@ -114,6 +120,7 @@ func GetAPIGroups() []string {
 		"ui.kubedb.com",
 		"ui.stash.appscode.com",
 		"work.open-cluster-management.io",
+		"project.openshift.io",
 	}
 }
 
@@ -226,8 +233,8 @@ func updateManifestWork(ctx context.Context, fakeServer *FakeServer, kc client.C
 			return err
 		}
 
-		if (kind == "CustomResourceDefinition" && name == "appreleases.drivers.x-helm.dev") ||
-			(kind == "AppRelease" && name == mw.Name) {
+		if (kind == "CustomResourceDefinition" && (name == "appreleases.drivers.x-helm.dev" || name == fakeProjectCRDName)) ||
+			(kind == driversapi.ResourceKindAppRelease && name == mw.Name) {
 			continue
 		}
 
@@ -373,7 +380,7 @@ func sanitizeFeatures(kc client.Client, clusterName string, features []string) (
 		exclusionGroup := f.Spec.FeatureExclusionGroup
 		if exclusionGroup != "" {
 			// Mark the exclusion group as having an enabled feature if this feature is enabled
-			if strings.Contains(featuresMap.EnabledFeatures, f.Name) {
+			if go_str.Contains(featuresMap.EnabledFeatures, f.Name) {
 				exclusionGroupFeatures[exclusionGroup] = append(exclusionGroupFeatures[exclusionGroup], f.Name)
 			}
 		}
@@ -387,7 +394,7 @@ func sanitizeFeatures(kc client.Client, clusterName string, features []string) (
 			return nil, err
 		}
 
-		if strings.Contains(featuresMap.ExternallyManagedFeatures, f) || strings.Contains(featuresMap.DisabledFeatures, f) {
+		if go_str.Contains(featuresMap.ExternallyManagedFeatures, f) || go_str.Contains(featuresMap.DisabledFeatures, f) {
 			continue
 		}
 
@@ -444,4 +451,57 @@ func existInManifestWork(kc client.Client, clusterName, fSetName, featureName st
 		}
 	}
 	return false, nil
+}
+
+func RegisterRequiredCRDs(fakeServer *FakeServer, profileBinding *profilev1alpha1.ManagedClusterProfileBinding) error {
+	crds := []*apiextensions.CustomResourceDefinition{
+		driversapi.AppRelease{}.CustomResourceDefinition(),
+	}
+
+	if profileBinding.Spec.Features != nil {
+		if _, ok := profileBinding.Spec.Features["aceshifter"]; ok {
+			crds = append(crds, fakeProjectCRD())
+		}
+	}
+
+	if err := resources.RegisterCRDs(fakeServer.FakeRestConfig, crds); err != nil {
+		return err
+	}
+	return nil
+}
+
+func fakeProjectCRD() *apiextensions.CustomResourceDefinition {
+	return &apiextensions.CustomResourceDefinition{
+		V1: &crdv1.CustomResourceDefinition{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "CustomResourceDefinition",
+				APIVersion: "apiextensions.k8s.io/v1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name: fakeProjectCRDName,
+			},
+			Spec: crdv1.CustomResourceDefinitionSpec{
+				Group: "project.openshift.io",
+				Scope: crdv1.NamespaceScoped,
+				Names: crdv1.CustomResourceDefinitionNames{
+					Plural:     "projects",
+					Singular:   "project",
+					Kind:       "Project",
+					ShortNames: []string{"proj"},
+				},
+				Versions: []crdv1.CustomResourceDefinitionVersion{
+					{
+						Name:    "v1",
+						Served:  true,
+						Storage: true,
+						Schema: &crdv1.CustomResourceValidation{
+							OpenAPIV3Schema: &crdv1.JSONSchemaProps{
+								Type: "object",
+							},
+						},
+					},
+				},
+			},
+		},
+	}
 }

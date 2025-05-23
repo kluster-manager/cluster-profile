@@ -29,23 +29,18 @@ import (
 )
 
 func GetClusterMetadata(cluster v1.ManagedCluster) (kmapi.ClusterInfo, error) {
-	var clusterInfo kmapi.ClusterInfo
-	var clusterMetadata struct {
-		ClusterMetadata kmapi.ClusterInfo `yaml:"clusterMetadata"`
-	}
-
+	var clusterInfo kmapi.ClusterClaimInfo
 	for _, claim := range cluster.Status.ClusterClaims {
 		if claim.Name == common.ClusterClaimClusterInfo {
 			yamlData := []byte(claim.Value)
-			if err := yaml.Unmarshal(yamlData, &clusterMetadata); err != nil {
-				return clusterInfo, err // Return error if YAML unmarshaling fails
+			if err := yaml.Unmarshal(yamlData, &clusterInfo); err != nil {
+				return clusterInfo.ClusterMetadata, err // Return error if YAML unmarshaling fails
 			}
-			clusterInfo = clusterMetadata.ClusterMetadata
-			return clusterInfo, nil
+			return clusterInfo.ClusterMetadata, nil
 		}
 	}
 
-	return clusterInfo, errors.New("cluster info not found")
+	return clusterInfo.ClusterMetadata, errors.New("cluster info not found")
 }
 
 func validateFeatureList(profile *profilev1alpha1.ManagedClusterSetProfile) error {

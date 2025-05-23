@@ -49,7 +49,6 @@ import (
 	crd_util "kmodules.xyz/client-go/apiextensions"
 	cu "kmodules.xyz/client-go/client"
 	kmeta "kmodules.xyz/client-go/meta"
-	"kmodules.xyz/fake-apiserver/pkg/resources"
 	uiapi "kmodules.xyz/resource-metadata/apis/ui/v1alpha1"
 	"kmodules.xyz/resource-metadata/hub"
 	"kubepack.dev/lib-app/pkg/editor"
@@ -161,8 +160,7 @@ func enableFeatureSet(ctx context.Context, kc client.Client, featureSet string, 
 
 	// <<<<<<<<       all necessary resources applied on fake-apiserver and set 'checkpoint' to differentiate modified objects       >>>>>>>
 
-	err = resources.RegisterCRDs(fakeServer.FakeRestConfig)
-	if err != nil {
+	if err := RegisterRequiredCRDs(fakeServer, profileBinding); err != nil {
 		return err
 	}
 
@@ -197,11 +195,14 @@ func enableFeatureSet(ctx context.Context, kc client.Client, featureSet string, 
 			return err
 		}
 
-		if err = fakeServer.FakeClient.Get(context.Background(), types.NamespacedName{Name: "kube-ui-server"}, &featureObj); err != nil {
-			return err
+		coreFeatures := make([]string, 0)
+		for _, feature := range features {
+			if feature != hub.ChartOpscenterFeatures && feature != hub.ChartFluxCD && feature != hub.ChartLicenseProxyServer {
+				coreFeatures = append(coreFeatures, feature)
+			}
 		}
 
-		return applyFeatureSet(ctx, kc, mw, fakeServer, featureSet, []string{"kube-ui-server"}, profile, &mc, profileBinding)
+		return applyFeatureSet(ctx, kc, mw, fakeServer, featureSet, coreFeatures, profile, &mc, profileBinding)
 	}
 	return applyFeatureSet(ctx, kc, mw, fakeServer, featureSet, features, profile, &mc, profileBinding)
 }
@@ -225,6 +226,7 @@ func applyFeatureSet(ctx context.Context, kc client.Client, mw *workv1.ManifestW
 	// Update values based on user-provided inputs stored in the profile
 	for _, f := range features {
 		featureKey := getFeaturePathInValues(f)
+
 		if profileBinding.Spec.Features != nil {
 			if _, exist := profileBinding.Spec.Features[f]; exist {
 				var valuesMap map[string]interface{}
