@@ -125,6 +125,8 @@ spec:
                     type: string
                   caBundle:
                     type: string
+                  cloudServiceAuthMode:
+                    type: string
                   displayName:
                     type: string
                   hubClusterID:
@@ -171,6 +173,8 @@ spec:
                   creationTimestamp:
                     format: date-time
                     type: string
+                  enableResourceTrial:
+                    type: boolean
                   name:
                     type: string
                   uid:

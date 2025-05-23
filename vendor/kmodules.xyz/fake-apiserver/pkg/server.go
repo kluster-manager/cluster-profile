@@ -108,6 +108,7 @@ func NewServer(opts *Options) *Server {
 			cache[k] = rd
 		}
 	}
+
 	return &Server{
 		opts:   opts,
 		reg:    hub.NewRegistry(hub.KnownUID, hub.NewKVMap(cache)),

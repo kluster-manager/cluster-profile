@@ -28,7 +28,6 @@ import (
 	"github.com/kluster-manager/cluster-profile/pkg/utils"
 
 	fluxhelm "github.com/fluxcd/helm-controller/api/v2"
-	kj "gomodules.xyz/encoding/json"
 	"gomodules.xyz/x/strings"
 	"helm.sh/helm/v3/pkg/release"
 	crdv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -50,7 +49,6 @@ import (
 	crd_util "kmodules.xyz/client-go/apiextensions"
 	cu "kmodules.xyz/client-go/client"
 	kmeta "kmodules.xyz/client-go/meta"
-	"kmodules.xyz/fake-apiserver/pkg/resources"
 	uiapi "kmodules.xyz/resource-metadata/apis/ui/v1alpha1"
 	"kmodules.xyz/resource-metadata/hub"
 	"kubepack.dev/lib-app/pkg/editor"
@@ -162,7 +160,7 @@ func enableFeatureSet(ctx context.Context, kc client.Client, featureSet string, 
 
 	// <<<<<<<<       all necessary resources applied on fake-apiserver and set 'checkpoint' to differentiate modified objects       >>>>>>>
 
-	if err := resources.RegisterCRDs(fakeServer.FakeRestConfig); err != nil {
+	if err := RegisterRequiredCRDs(fakeServer, profileBinding); err != nil {
 		return err
 	}
 
@@ -228,38 +226,7 @@ func applyFeatureSet(ctx context.Context, kc client.Client, mw *workv1.ManifestW
 	// Update values based on user-provided inputs stored in the profile
 	for _, f := range features {
 		featureKey := getFeaturePathInValues(f)
-		if profileBinding.Spec.Features != nil {
-			if _, ok := profileBinding.Spec.Features["aceshifter"]; ok {
-				val, found, err := unstructured.NestedFieldNoCopy(model, "resources", featureKey, "spec", "valuesFrom")
-				if err != nil {
-					return err
-				}
 
-				var existingValues []any
-				if found {
-					existingValues, err = kj.ToJsonArray(val)
-					if err != nil {
-						return fmt.Errorf("failed to convert existing valuesFrom to JSON array: %w", err)
-					}
-				}
-
-				newEntry := uiapi.ValuesReference{
-					Kind:      "ConfigMap",
-					Name:      "ace-openshift-scc",
-					ValuesKey: fmt.Sprintf("%s.yaml", f),
-				}
-
-				newValues, err := kj.ToJsonArray([]uiapi.ValuesReference{newEntry})
-				if err != nil {
-					return fmt.Errorf("failed to convert new valuesFrom to JSON array: %w", err)
-				}
-
-				updatedValues := append(existingValues, newValues...)
-				if err := unstructured.SetNestedField(model, updatedValues, "resources", featureKey, "spec", "valuesFrom"); err != nil {
-					return fmt.Errorf("failed to set updated valuesFrom field: %w", err)
-				}
-			}
-		}
 		if profileBinding.Spec.Features != nil {
 			if _, exist := profileBinding.Spec.Features[f]; exist {
 				var valuesMap map[string]interface{}
