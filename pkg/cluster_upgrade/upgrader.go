@@ -48,7 +48,7 @@ func UpgradeCluster(profileBinding *profilev1alpha1.ManagedClusterProfileBinding
 
 	var fakeServer *feature_installer.FakeServer
 	var err error
-	if fakeServer, err = feature_installer.StartFakeApiServerAndApplyBaseManifestWorkReplicaSets(context.Background(), kc); err != nil {
+	if fakeServer, err = feature_installer.StartFakeApiServerAndApplyBaseManifestWorkReplicaSets(context.Background(), kc, profileBinding); err != nil {
 		return err
 	}
 
