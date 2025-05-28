@@ -120,12 +120,18 @@ func GetAPIGroups() []string {
 		"ui.kubedb.com",
 		"ui.stash.appscode.com",
 		"work.open-cluster-management.io",
-		"project.openshift.io",
 	}
 }
 
-func initializeFakeServer() (*http.Server, *pkg.Server, *rest.Config, *api.Config) {
+func initializeFakeServer(profileBinding *profilev1alpha1.ManagedClusterProfileBinding) (*http.Server, *pkg.Server, *rest.Config, *api.Config) {
 	apiGroups := GetAPIGroups()
+
+	if profileBinding != nil && profileBinding.Spec.Features != nil {
+		if _, ok := profileBinding.Spec.Features["aceshifter"]; ok {
+			apiGroups = append(apiGroups, "project.openshift.io")
+		}
+	}
+
 	opts := pkg.NewOptions(apiGroups...)
 
 	s := pkg.NewServer(opts)
@@ -143,10 +149,10 @@ func initializeFakeServer() (*http.Server, *pkg.Server, *rest.Config, *api.Confi
 	return srv, s, restcfg, kubecfg
 }
 
-func StartFakeApiServerAndApplyBaseManifestWorkReplicaSets(ctx context.Context, kc client.Client) (*FakeServer, error) {
+func StartFakeApiServerAndApplyBaseManifestWorkReplicaSets(ctx context.Context, kc client.Client, profileBinding *profilev1alpha1.ManagedClusterProfileBinding) (*FakeServer, error) {
 	var fakeServer FakeServer
 	var err error
-	fakeServer.FakeSrv, fakeServer.FakeS, fakeServer.FakeRestConfig, fakeServer.FakeApiConfig = initializeFakeServer()
+	fakeServer.FakeSrv, fakeServer.FakeS, fakeServer.FakeRestConfig, fakeServer.FakeApiConfig = initializeFakeServer(profileBinding)
 	fakeServer.FakeClient, err = utils.GetNewRuntimeClient(fakeServer.FakeRestConfig)
 	if err != nil {
 		return nil, err
