@@ -2223,7 +2223,7 @@ kmodules.xyz/apiversion
 # kmodules.xyz/apply v0.29.0
 ## explicit; go 1.21.5
 kmodules.xyz/apply
-# kmodules.xyz/client-go v0.32.4
+# kmodules.xyz/client-go v0.32.8-0.20250827171411-d067fce7a044
 ## explicit; go 1.23.0
 kmodules.xyz/client-go
 kmodules.xyz/client-go/api/v1

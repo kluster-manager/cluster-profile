@@ -22,7 +22,7 @@ require (
 	k8s.io/kube-openapi v0.0.0-20250318190949-c8a335a9a2ff
 	k8s.io/kubectl v0.32.2
 	k8s.io/utils v0.0.0-20241210054802-24370beab758
-	kmodules.xyz/client-go v0.32.4
+	kmodules.xyz/client-go v0.32.8-0.20250827171411-d067fce7a044
 	kmodules.xyz/fake-apiserver v0.0.7
 	kmodules.xyz/resource-metadata v0.29.1-0.20250523040023-d0200d1bce1b
 	kubepack.dev/lib-app v0.5.0
