@@ -1,7 +1,6 @@
 apiVersion: ui.k8s.appscode.com/v1alpha1
 kind: ResourceEditor
 metadata:
-  creationTimestamp: null
   labels:
     k8s.io/group: core.kubestash.com
     k8s.io/kind: BackupBlueprint
@@ -27,5 +26,5 @@ spec:
         apiGroup: source.toolkit.fluxcd.io
         kind: HelmRepository
         name: appscode-charts-oci
-      version: v0.17.0
+      version: sha256:f0f9dd18d10242db7ae0f69d6385d5d460c0c8b8fa90853704cdddea9f04737e
     enforceQuota: false

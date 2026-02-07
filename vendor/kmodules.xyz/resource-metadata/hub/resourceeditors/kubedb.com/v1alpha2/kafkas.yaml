@@ -1,7 +1,6 @@
 apiVersion: ui.k8s.appscode.com/v1alpha1
 kind: ResourceEditor
 metadata:
-  creationTimestamp: null
   labels:
     k8s.io/group: kubedb.com
     k8s.io/kind: Kafka
@@ -29,9 +28,10 @@ spec:
             apiGroup: source.toolkit.fluxcd.io
             kind: HelmRepository
             name: appscode-charts-oci
-          version: v0.17.0
+          version: sha256:a7560d7fa1ccafea40c87d47db9dd50266a987a420458679eb2aa9a5523d84b5
         enforceQuota: false
         flow: standalone-edit
+        icon: hugeicons:presentation-line-chart-01
         icons:
         - src: https://cdn.appscode.com/k8s/icons/action-icons/monitor.svg
           type: image/svg+xml
@@ -44,7 +44,7 @@ spec:
         apiGroup: source.toolkit.fluxcd.io
         kind: HelmRepository
         name: appscode-charts-oci
-      version: v0.17.0
+      version: sha256:a7560d7fa1ccafea40c87d47db9dd50266a987a420458679eb2aa9a5523d84b5
     enforceQuota: true
     options:
       name: kubedbcom-kafka-editor-options
@@ -52,7 +52,7 @@ spec:
         apiGroup: source.toolkit.fluxcd.io
         kind: HelmRepository
         name: appscode-charts-oci
-      version: v0.17.0
+      version: sha256:aaa94356d99acba9f3633aa2725cb009f5b762f04c492f7adf0cbf81fbf19022
   variants:
   - name: default
     selector:

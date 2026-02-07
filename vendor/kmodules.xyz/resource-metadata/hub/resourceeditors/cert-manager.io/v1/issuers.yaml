@@ -1,7 +1,6 @@
 apiVersion: ui.k8s.appscode.com/v1alpha1
 kind: ResourceEditor
 metadata:
-  creationTimestamp: null
   labels:
     k8s.io/group: cert-manager.io
     k8s.io/kind: Issuer
@@ -35,5 +34,5 @@ spec:
         apiGroup: source.toolkit.fluxcd.io
         kind: HelmRepository
         name: appscode-charts-oci
-      version: v0.17.0
+      version: sha256:03c8f9c8535585b35a74009f90fe0e24d48137ae4932afb4d51d47ee91361f99
     enforceQuota: false

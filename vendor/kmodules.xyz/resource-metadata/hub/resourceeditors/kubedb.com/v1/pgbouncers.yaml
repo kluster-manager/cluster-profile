@@ -1,7 +1,6 @@
 apiVersion: ui.k8s.appscode.com/v1alpha1
 kind: ResourceEditor
 metadata:
-  creationTimestamp: null
   labels:
     k8s.io/group: kubedb.com
     k8s.io/kind: PgBouncer
@@ -29,9 +28,10 @@ spec:
             apiGroup: source.toolkit.fluxcd.io
             kind: HelmRepository
             name: appscode-charts-oci
-          version: v0.17.0
+          version: sha256:2115f3d6559294a3b52cc6b65945e07188645f3bef31c0aac047386a896775a2
         enforceQuota: false
         flow: standalone-create
+        icon: qlementine-icons:version-control-16
         icons:
         - src: https://cdn.appscode.com/k8s/icons/action-icons/version.svg
           type: image/svg+xml
@@ -43,9 +43,10 @@ spec:
             apiGroup: source.toolkit.fluxcd.io
             kind: HelmRepository
             name: appscode-charts-oci
-          version: v0.17.0
+          version: sha256:2115f3d6559294a3b52cc6b65945e07188645f3bef31c0aac047386a896775a2
         enforceQuota: false
         flow: standalone-create
+        icon: hugeicons:settings-05
         icons:
         - src: https://cdn.appscode.com/k8s/icons/action-icons/reconfigure.svg
           type: image/svg+xml
@@ -53,6 +54,11 @@ spec:
         operationId: create-opsrequest-reconfigure
       name: Operations
     - items:
+      - enforceQuota: false
+        flow: ""
+        icon: hugeicons:vertical-resize
+        name: Scale Vertically
+        operationId: scale-vertically
       - disabledTemplate: |
           {{ not (gt .spec.replicas 1) }}
         editor:
@@ -61,9 +67,10 @@ spec:
             apiGroup: source.toolkit.fluxcd.io
             kind: HelmRepository
             name: appscode-charts-oci
-          version: v0.17.0
+          version: sha256:2115f3d6559294a3b52cc6b65945e07188645f3bef31c0aac047386a896775a2
         enforceQuota: true
         flow: standalone-create
+        icon: hugeicons:horizontal-resize
         icons:
         - src: https://cdn.appscode.com/k8s/icons/action-icons/horizontal_scale.svg
           type: image/svg+xml
@@ -75,7 +82,7 @@ spec:
             apiGroup: source.toolkit.fluxcd.io
             kind: HelmRepository
             name: appscode-charts-oci
-          version: v0.17.0
+          version: sha256:2115f3d6559294a3b52cc6b65945e07188645f3bef31c0aac047386a896775a2
         enforceQuota: true
         flow: standalone-create
         icons:
@@ -83,6 +90,7 @@ spec:
           type: image/svg+xml
         name: Vertical Scale
         operationId: create-opsrequest-verticalscaling
+        partOf: Scale Vertically
       name: Scaling
     - items:
       - editor:
@@ -91,7 +99,7 @@ spec:
             apiGroup: source.toolkit.fluxcd.io
             kind: HelmRepository
             name: appscode-charts-oci
-          version: v0.17.0
+          version: sha256:1fdbdfb4106b53c547c6a5b10f3876c17f2b93692a963189d2c22d73142eeb6e
         enforceQuota: true
         flow: standalone-edit
         icons:
@@ -99,6 +107,7 @@ spec:
           type: image/svg+xml
         name: Compute
         operationId: edit-self-compute-autoscaler
+        partOf: Scale Vertically
       name: Autoscaling
     - items:
       - editor:
@@ -107,9 +116,10 @@ spec:
             apiGroup: source.toolkit.fluxcd.io
             kind: HelmRepository
             name: appscode-charts-oci
-          version: v0.17.0
+          version: sha256:1fdbdfb4106b53c547c6a5b10f3876c17f2b93692a963189d2c22d73142eeb6e
         enforceQuota: false
         flow: standalone-edit
+        icon: hugeicons:presentation-line-chart-01
         icons:
         - src: https://cdn.appscode.com/k8s/icons/action-icons/monitor.svg
           type: image/svg+xml
@@ -122,7 +132,7 @@ spec:
         apiGroup: source.toolkit.fluxcd.io
         kind: HelmRepository
         name: appscode-charts-oci
-      version: v0.17.0
+      version: sha256:1fdbdfb4106b53c547c6a5b10f3876c17f2b93692a963189d2c22d73142eeb6e
     enforceQuota: false
     options:
       name: kubedbcom-pgbouncer-editor-options
@@ -130,7 +140,7 @@ spec:
         apiGroup: source.toolkit.fluxcd.io
         kind: HelmRepository
         name: appscode-charts-oci
-      version: v0.17.0
+      version: sha256:d5ab706c74c2d7432be8680cf8ce9b4e2a3e543d50a68a870a0837732897f041
   variants:
   - name: default
     selector:

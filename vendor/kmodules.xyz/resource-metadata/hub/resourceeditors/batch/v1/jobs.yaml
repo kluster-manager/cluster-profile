@@ -1,7 +1,6 @@
 apiVersion: ui.k8s.appscode.com/v1alpha1
 kind: ResourceEditor
 metadata:
-  creationTimestamp: null
   labels:
     k8s.io/group: batch
     k8s.io/kind: Job
@@ -27,5 +26,5 @@ spec:
         apiGroup: source.toolkit.fluxcd.io
         kind: HelmRepository
         name: appscode-charts-oci
-      version: v0.17.0
+      version: sha256:a788f10cfabf997fbcdd508485dfd1f628cd09de7c9c1d0fcdf28454213c5e9d
     enforceQuota: false

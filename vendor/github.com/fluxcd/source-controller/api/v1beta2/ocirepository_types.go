@@ -205,7 +205,7 @@ type OCIRepositoryStatus struct {
 
 	// Artifact represents the output of the last successful OCI Repository sync.
 	// +optional
-	Artifact *apiv1.Artifact `json:"artifact,omitempty"`
+	Artifact *meta.Artifact `json:"artifact,omitempty"`
 
 	// ContentConfigChecksum is a checksum of all the configurations related to
 	// the content of the source artifact:
@@ -260,7 +260,7 @@ func (in OCIRepository) GetRequeueAfter() time.Duration {
 
 // GetArtifact returns the latest Artifact from the OCIRepository if present in
 // the status sub-resource.
-func (in *OCIRepository) GetArtifact() *apiv1.Artifact {
+func (in *OCIRepository) GetArtifact() *meta.Artifact {
 	return in.Status.Artifact
 }
 
@@ -283,10 +283,10 @@ func (in *OCIRepository) GetLayerOperation() string {
 }
 
 // +genclient
-// +kubebuilder:storageversion
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:shortName=ocirepo
 // +kubebuilder:subresource:status
+// +kubebuilder:deprecatedversion:warning="v1beta2 OCIRepository is deprecated, upgrade to v1"
 // +kubebuilder:printcolumn:name="URL",type=string,JSONPath=`.spec.url`
 // +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.conditions[?(@.type==\"Ready\")].status",description=""
 // +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.conditions[?(@.type==\"Ready\")].message",description=""

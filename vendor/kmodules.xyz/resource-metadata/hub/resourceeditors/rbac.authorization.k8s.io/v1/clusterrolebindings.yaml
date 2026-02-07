@@ -1,7 +1,6 @@
 apiVersion: ui.k8s.appscode.com/v1alpha1
 kind: ResourceEditor
 metadata:
-  creationTimestamp: null
   labels:
     k8s.io/group: rbac.authorization.k8s.io
     k8s.io/kind: ClusterRoleBinding
@@ -27,5 +26,5 @@ spec:
         apiGroup: source.toolkit.fluxcd.io
         kind: HelmRepository
         name: appscode-charts-oci
-      version: v0.17.0
+      version: sha256:2f2cc32c4baaa4eeecfc15bafa852167a913e10f150982e43679243a4f5e4de1
     enforceQuota: false

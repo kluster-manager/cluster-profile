@@ -1,7 +1,6 @@
 apiVersion: ui.k8s.appscode.com/v1alpha1
 kind: ResourceEditor
 metadata:
-  creationTimestamp: null
   labels:
     k8s.io/group: catalog.appscode.com
     k8s.io/kind: PgBouncerBinding
@@ -27,5 +26,5 @@ spec:
         apiGroup: source.toolkit.fluxcd.io
         kind: HelmRepository
         name: appscode-charts-oci
-      version: v0.17.0
+      version: sha256:2c19d5af9b38c3c77317aac4b473e2ba29bf27d161b29adb23cfa485bfd71909
     enforceQuota: false

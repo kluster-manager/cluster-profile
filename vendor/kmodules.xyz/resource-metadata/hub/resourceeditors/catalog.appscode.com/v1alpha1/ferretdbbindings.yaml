@@ -1,7 +1,6 @@
 apiVersion: ui.k8s.appscode.com/v1alpha1
 kind: ResourceEditor
 metadata:
-  creationTimestamp: null
   labels:
     k8s.io/group: catalog.appscode.com
     k8s.io/kind: FerretDBBinding
@@ -27,5 +26,5 @@ spec:
         apiGroup: source.toolkit.fluxcd.io
         kind: HelmRepository
         name: appscode-charts-oci
-      version: v0.17.0
+      version: sha256:8b6bdc012ff5528c4564912955e0fc8e40482cb9a49451d5f565a78e3986d807
     enforceQuota: false

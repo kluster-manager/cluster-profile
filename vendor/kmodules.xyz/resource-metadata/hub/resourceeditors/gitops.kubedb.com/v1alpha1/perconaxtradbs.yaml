@@ -1,7 +1,6 @@
 apiVersion: ui.k8s.appscode.com/v1alpha1
 kind: ResourceEditor
 metadata:
-  creationTimestamp: null
   labels:
     k8s.io/group: gitops.kubedb.com
     k8s.io/kind: PerconaXtraDB
@@ -15,3 +14,12 @@ spec:
     name: perconaxtradbs
     scope: Namespaced
     version: v1alpha1
+  ui:
+    editor:
+      name: gitopskubedbcom-perconaxtradb-editor
+      sourceRef:
+        apiGroup: source.toolkit.fluxcd.io
+        kind: HelmRepository
+        name: appscode-charts-oci
+      version: sha256:5b9ac8d9b863f201d22e55a4b31f391077bffcd36a8a6c2dc5775194fe7aa572
+    enforceQuota: false

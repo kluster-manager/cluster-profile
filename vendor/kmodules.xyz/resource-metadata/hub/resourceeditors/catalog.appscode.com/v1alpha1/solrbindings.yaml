@@ -1,7 +1,6 @@
 apiVersion: ui.k8s.appscode.com/v1alpha1
 kind: ResourceEditor
 metadata:
-  creationTimestamp: null
   labels:
     k8s.io/group: catalog.appscode.com
     k8s.io/kind: SolrBinding
@@ -27,5 +26,5 @@ spec:
         apiGroup: source.toolkit.fluxcd.io
         kind: HelmRepository
         name: appscode-charts-oci
-      version: v0.17.0
+      version: sha256:9131e11c6de03a2d08836fa99a2d0109da7aa41f1b3c3d37794cfe34fbd0287c
     enforceQuota: false

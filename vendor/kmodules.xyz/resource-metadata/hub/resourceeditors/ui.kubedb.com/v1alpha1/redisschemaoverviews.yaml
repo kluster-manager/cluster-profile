@@ -1,7 +1,6 @@
 apiVersion: ui.k8s.appscode.com/v1alpha1
 kind: ResourceEditor
 metadata:
-  creationTimestamp: null
   labels:
     k8s.io/group: ui.kubedb.com
     k8s.io/kind: RedisSchemaOverview
@@ -22,5 +21,5 @@ spec:
         apiGroup: source.toolkit.fluxcd.io
         kind: HelmRepository
         name: appscode-charts-oci
-      version: v0.17.0
+      version: sha256:cf3053490c05348c429f926045b6b18e1af4b893f604f255fb2e36e5349e5570
     enforceQuota: false

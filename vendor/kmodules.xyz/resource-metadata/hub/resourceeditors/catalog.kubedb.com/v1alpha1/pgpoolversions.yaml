@@ -1,7 +1,6 @@
 apiVersion: ui.k8s.appscode.com/v1alpha1
 kind: ResourceEditor
 metadata:
-  creationTimestamp: null
   labels:
     k8s.io/group: catalog.kubedb.com
     k8s.io/kind: PgpoolVersion
@@ -27,5 +26,5 @@ spec:
         apiGroup: source.toolkit.fluxcd.io
         kind: HelmRepository
         name: appscode-charts-oci
-      version: v0.17.0
+      version: sha256:cfe200e41b15c16f85ef72872b47c0c0765d0a3056e7f28e6a5d1e8e27709646
     enforceQuota: false

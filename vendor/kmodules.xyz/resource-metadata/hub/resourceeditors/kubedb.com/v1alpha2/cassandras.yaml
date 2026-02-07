@@ -1,7 +1,6 @@
 apiVersion: ui.k8s.appscode.com/v1alpha1
 kind: ResourceEditor
 metadata:
-  creationTimestamp: null
   labels:
     k8s.io/group: kubedb.com
     k8s.io/kind: Cassandra
@@ -24,14 +23,77 @@ spec:
     actions:
     - items:
       - editor:
+          name: kubedbcom-cassandra-editor
+          sourceRef:
+            apiGroup: source.toolkit.fluxcd.io
+            kind: HelmRepository
+            name: appscode-charts-oci
+          version: sha256:86a1ac3804c6f81d660692a06cf48727837342aea9228a752ab28aa8cd537c94
+        enforceQuota: false
+        flow: standalone-edit
+        icon: material-symbols-light:backup-outline
+        icons:
+        - src: https://cdn.appscode.com/k8s/icons/action-icons/configure-backup.svg
+          type: image/svg+xml
+        name: Configure Backup
+        operationId: edit-self-backupconfiguration
+      - editor:
+          name: corekubestashcom-backupsession-editor
+          sourceRef:
+            apiGroup: source.toolkit.fluxcd.io
+            kind: HelmRepository
+            name: appscode-charts-oci
+          version: sha256:a0e4c46fcf232315b8f6abef8e7fc2deb8b84fde2fa8509495525a2d0a69afde
+        enforceQuota: false
+        flow: standalone-create
+        icon: carbon:ibm-cloud-backup-and-recovery
+        icons:
+        - src: https://cdn.appscode.com/k8s/icons/action-icons/instant-backup.svg
+          type: image/svg+xml
+        name: Instant Backup
+        operationId: create-instant-backup
+      - editor:
+          name: corekubestashcom-restoresession-editor-options
+          sourceRef:
+            apiGroup: source.toolkit.fluxcd.io
+            kind: HelmRepository
+            name: appscode-charts-oci
+          version: sha256:b76429b86b8232fcf24c77dd6c65d86ceb3e220550e95e7208ca484cd57372ad
+        enforceQuota: false
+        flow: standalone-create
+        icon: mdi:backup-restore
+        icons:
+        - src: https://cdn.appscode.com/k8s/icons/action-icons/restore.svg
+          type: image/svg+xml
+        name: Restore
+        operationId: create-restoresession
+      name: Backups
+    - items:
+      - editor:
           name: opskubedbcom-cassandraopsrequest-editor
           sourceRef:
             apiGroup: source.toolkit.fluxcd.io
             kind: HelmRepository
             name: appscode-charts-oci
-          version: v0.17.0
+          version: sha256:e090e6920803eece11643edb1321b9adfdd745fa83a59faa01bcbdffaae8a25c
         enforceQuota: false
         flow: standalone-create
+        icon: qlementine-icons:version-control-16
+        icons:
+        - src: https://cdn.appscode.com/k8s/icons/action-icons/version.svg
+          type: image/svg+xml
+        name: Update Version
+        operationId: create-opsrequest-upgrade
+      - editor:
+          name: opskubedbcom-cassandraopsrequest-editor
+          sourceRef:
+            apiGroup: source.toolkit.fluxcd.io
+            kind: HelmRepository
+            name: appscode-charts-oci
+          version: sha256:e090e6920803eece11643edb1321b9adfdd745fa83a59faa01bcbdffaae8a25c
+        enforceQuota: false
+        flow: standalone-create
+        icon: hugeicons:redo
         icons:
         - src: https://cdn.appscode.com/k8s/icons/action-icons/restart.svg
           type: image/svg+xml
@@ -43,9 +105,10 @@ spec:
             apiGroup: source.toolkit.fluxcd.io
             kind: HelmRepository
             name: appscode-charts-oci
-          version: v0.17.0
+          version: sha256:e090e6920803eece11643edb1321b9adfdd745fa83a59faa01bcbdffaae8a25c
         enforceQuota: false
         flow: standalone-create
+        icon: hugeicons:settings-05
         icons:
         - src: https://cdn.appscode.com/k8s/icons/action-icons/reconfigure.svg
           type: image/svg+xml
@@ -53,6 +116,16 @@ spec:
         operationId: create-opsrequest-reconfigure
       name: Operations
     - items:
+      - enforceQuota: false
+        flow: ""
+        icon: hugeicons:vertical-resize
+        name: Scale Vertically
+        operationId: scale-vertically
+      - enforceQuota: false
+        flow: ""
+        icon: hugeicons:arrow-expand
+        name: Scale Storage
+        operationId: scale-storage
       - disabledTemplate: |
           {{ not (gt .spec.replicas 1) }}
         editor:
@@ -61,9 +134,10 @@ spec:
             apiGroup: source.toolkit.fluxcd.io
             kind: HelmRepository
             name: appscode-charts-oci
-          version: v0.17.0
+          version: sha256:e090e6920803eece11643edb1321b9adfdd745fa83a59faa01bcbdffaae8a25c
         enforceQuota: true
         flow: standalone-create
+        icon: hugeicons:horizontal-resize
         icons:
         - src: https://cdn.appscode.com/k8s/icons/action-icons/horizontal_scale.svg
           type: image/svg+xml
@@ -75,7 +149,7 @@ spec:
             apiGroup: source.toolkit.fluxcd.io
             kind: HelmRepository
             name: appscode-charts-oci
-          version: v0.17.0
+          version: sha256:e090e6920803eece11643edb1321b9adfdd745fa83a59faa01bcbdffaae8a25c
         enforceQuota: true
         flow: standalone-create
         icons:
@@ -83,13 +157,14 @@ spec:
           type: image/svg+xml
         name: Vertical Scale
         operationId: create-opsrequest-verticalscaling
+        partOf: Scale Vertically
       - editor:
           name: opskubedbcom-cassandraopsrequest-editor
           sourceRef:
             apiGroup: source.toolkit.fluxcd.io
             kind: HelmRepository
             name: appscode-charts-oci
-          version: v0.17.0
+          version: sha256:e090e6920803eece11643edb1321b9adfdd745fa83a59faa01bcbdffaae8a25c
         enforceQuota: true
         flow: standalone-create
         icons:
@@ -97,14 +172,79 @@ spec:
           type: image/svg+xml
         name: Expand Volume
         operationId: create-opsrequest-volumeexpansion
+        partOf: Scale Storage
       name: Scaling
+    - items:
+      - editor:
+          name: kubedbcom-cassandra-editor
+          sourceRef:
+            apiGroup: source.toolkit.fluxcd.io
+            kind: HelmRepository
+            name: appscode-charts-oci
+          version: sha256:86a1ac3804c6f81d660692a06cf48727837342aea9228a752ab28aa8cd537c94
+        enforceQuota: true
+        flow: standalone-edit
+        icons:
+        - src: https://cdn.appscode.com/k8s/icons/action-icons/compute.svg
+          type: image/svg+xml
+        name: Compute
+        operationId: edit-self-compute-autoscaler
+        partOf: Scale Vertically
+      - editor:
+          name: kubedbcom-cassandra-editor
+          sourceRef:
+            apiGroup: source.toolkit.fluxcd.io
+            kind: HelmRepository
+            name: appscode-charts-oci
+          version: sha256:86a1ac3804c6f81d660692a06cf48727837342aea9228a752ab28aa8cd537c94
+        enforceQuota: true
+        flow: standalone-edit
+        icons:
+        - src: https://cdn.appscode.com/k8s/icons/action-icons/storage.svg
+          type: image/svg+xml
+        name: Storage
+        operationId: edit-self-storage-autoscaler
+        partOf: Scale Storage
+      name: Autoscaling
+    - items:
+      - editor:
+          name: opskubedbcom-cassandraopsrequest-editor
+          sourceRef:
+            apiGroup: source.toolkit.fluxcd.io
+            kind: HelmRepository
+            name: appscode-charts-oci
+          version: sha256:e090e6920803eece11643edb1321b9adfdd745fa83a59faa01bcbdffaae8a25c
+        enforceQuota: false
+        flow: standalone-create
+        icon: hugeicons:security-check
+        icons:
+        - src: https://cdn.appscode.com/k8s/icons/action-icons/configure.svg
+          type: image/svg+xml
+        name: TLS Configure
+        operationId: create-opsrequest-reconfiguretls
+      - editor:
+          name: kubedbcom-cassandra-editor
+          sourceRef:
+            apiGroup: source.toolkit.fluxcd.io
+            kind: HelmRepository
+            name: appscode-charts-oci
+          version: sha256:86a1ac3804c6f81d660692a06cf48727837342aea9228a752ab28aa8cd537c94
+        enforceQuota: false
+        flow: standalone-edit
+        icon: hugeicons:presentation-line-chart-01
+        icons:
+        - src: https://cdn.appscode.com/k8s/icons/action-icons/monitor.svg
+          type: image/svg+xml
+        name: Monitoring
+        operationId: edit-self-monitoring
+      name: Security & Monitoring
     editor:
       name: kubedbcom-cassandra-editor
       sourceRef:
         apiGroup: source.toolkit.fluxcd.io
         kind: HelmRepository
         name: appscode-charts-oci
-      version: v0.17.0
+      version: sha256:86a1ac3804c6f81d660692a06cf48727837342aea9228a752ab28aa8cd537c94
     enforceQuota: true
     options:
       name: kubedbcom-cassandra-editor-options
@@ -112,7 +252,7 @@ spec:
         apiGroup: source.toolkit.fluxcd.io
         kind: HelmRepository
         name: appscode-charts-oci
-      version: v0.17.0
+      version: sha256:555953307e421d351f6eb695ab8cc0d040db53ab3118f0d09d706a074b37372b
   variants:
   - name: default
     selector:

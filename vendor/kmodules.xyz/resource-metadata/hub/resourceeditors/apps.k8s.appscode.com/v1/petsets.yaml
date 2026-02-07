@@ -1,7 +1,6 @@
 apiVersion: ui.k8s.appscode.com/v1alpha1
 kind: ResourceEditor
 metadata:
-  creationTimestamp: null
   labels:
     k8s.io/group: apps.k8s.appscode.com
     k8s.io/kind: PetSet
@@ -27,5 +26,5 @@ spec:
         apiGroup: source.toolkit.fluxcd.io
         kind: HelmRepository
         name: appscode-charts-oci
-      version: v0.17.0
+      version: sha256:c6720af833c03b32a4744c764d1da88b9bf6d5a49983314256e2317aee10d3d2
     enforceQuota: false

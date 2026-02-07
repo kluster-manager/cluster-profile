@@ -1,7 +1,6 @@
 apiVersion: ui.k8s.appscode.com/v1alpha1
 kind: ResourceEditor
 metadata:
-  creationTimestamp: null
   labels:
     k8s.io/group: catalog.kubedb.com
     k8s.io/kind: IgniteVersion
@@ -9,9 +8,23 @@ metadata:
     k8s.io/version: v1alpha1
   name: catalog.kubedb.com-v1alpha1-igniteversions
 spec:
+  icons:
+  - src: https://cdn.appscode.com/k8s/icons/catalog.kubedb.com/igniteversions.svg
+    type: image/svg+xml
+  - src: https://cdn.appscode.com/k8s/icons/catalog.kubedb.com/igniteversions.png
+    type: image/png
   resource:
     group: catalog.kubedb.com
     kind: IgniteVersion
     name: igniteversions
     scope: Cluster
     version: v1alpha1
+  ui:
+    editor:
+      name: catalogkubedbcom-igniteversion-editor
+      sourceRef:
+        apiGroup: source.toolkit.fluxcd.io
+        kind: HelmRepository
+        name: appscode-charts-oci
+      version: sha256:7cffefa8a3b19d26af9dcb80fcab7d49909fcc27191308ed1a2181eec48cd8e4
+    enforceQuota: false

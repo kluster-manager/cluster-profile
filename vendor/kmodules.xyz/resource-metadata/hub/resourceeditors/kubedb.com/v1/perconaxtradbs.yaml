@@ -1,7 +1,6 @@
 apiVersion: ui.k8s.appscode.com/v1alpha1
 kind: ResourceEditor
 metadata:
-  creationTimestamp: null
   labels:
     k8s.io/group: kubedb.com
     k8s.io/kind: PerconaXtraDB
@@ -29,9 +28,10 @@ spec:
             apiGroup: source.toolkit.fluxcd.io
             kind: HelmRepository
             name: appscode-charts-oci
-          version: v0.17.0
+          version: sha256:0025bd9b7316f7cd472ffba8104839bbf1fb451ce25481e7750b28740bd57698
         enforceQuota: false
         flow: standalone-create
+        icon: hugeicons:redo
         icons:
         - src: https://cdn.appscode.com/k8s/icons/action-icons/restart.svg
           type: image/svg+xml
@@ -43,9 +43,10 @@ spec:
             apiGroup: source.toolkit.fluxcd.io
             kind: HelmRepository
             name: appscode-charts-oci
-          version: v0.17.0
+          version: sha256:0025bd9b7316f7cd472ffba8104839bbf1fb451ce25481e7750b28740bd57698
         enforceQuota: false
         flow: standalone-create
+        icon: hugeicons:settings-05
         icons:
         - src: https://cdn.appscode.com/k8s/icons/action-icons/reconfigure.svg
           type: image/svg+xml
@@ -53,6 +54,16 @@ spec:
         operationId: create-opsrequest-reconfigure
       name: Operations
     - items:
+      - enforceQuota: false
+        flow: ""
+        icon: hugeicons:vertical-resize
+        name: Scale Vertically
+        operationId: scale-vertically
+      - enforceQuota: false
+        flow: ""
+        icon: hugeicons:arrow-expand
+        name: Scale Storage
+        operationId: scale-storage
       - disabledTemplate: |
           {{ not (gt .spec.replicas 1) }}
         editor:
@@ -61,9 +72,10 @@ spec:
             apiGroup: source.toolkit.fluxcd.io
             kind: HelmRepository
             name: appscode-charts-oci
-          version: v0.17.0
+          version: sha256:0025bd9b7316f7cd472ffba8104839bbf1fb451ce25481e7750b28740bd57698
         enforceQuota: true
         flow: standalone-create
+        icon: hugeicons:horizontal-resize
         icons:
         - src: https://cdn.appscode.com/k8s/icons/action-icons/horizontal_scale.svg
           type: image/svg+xml
@@ -75,7 +87,7 @@ spec:
             apiGroup: source.toolkit.fluxcd.io
             kind: HelmRepository
             name: appscode-charts-oci
-          version: v0.17.0
+          version: sha256:0025bd9b7316f7cd472ffba8104839bbf1fb451ce25481e7750b28740bd57698
         enforceQuota: true
         flow: standalone-create
         icons:
@@ -83,13 +95,14 @@ spec:
           type: image/svg+xml
         name: Vertical Scale
         operationId: create-opsrequest-verticalscaling
+        partOf: Scale Vertically
       - editor:
           name: opskubedbcom-perconaxtradbopsrequest-editor
           sourceRef:
             apiGroup: source.toolkit.fluxcd.io
             kind: HelmRepository
             name: appscode-charts-oci
-          version: v0.17.0
+          version: sha256:0025bd9b7316f7cd472ffba8104839bbf1fb451ce25481e7750b28740bd57698
         enforceQuota: true
         flow: standalone-create
         icons:
@@ -97,6 +110,7 @@ spec:
           type: image/svg+xml
         name: Expand Volume
         operationId: create-opsrequest-volumeexpansion
+        partOf: Scale Storage
       name: Scaling
     - items:
       - editor:
@@ -105,7 +119,7 @@ spec:
             apiGroup: source.toolkit.fluxcd.io
             kind: HelmRepository
             name: appscode-charts-oci
-          version: v0.17.0
+          version: sha256:aaf28169f478e3fcc1901d32203d689abac4236ae36203c43c2ae88ec772baaa
         enforceQuota: true
         flow: standalone-edit
         icons:
@@ -113,13 +127,14 @@ spec:
           type: image/svg+xml
         name: Compute
         operationId: edit-self-compute-autoscaler
+        partOf: Scale Vertically
       - editor:
           name: kubedbcom-perconaxtradb-editor
           sourceRef:
             apiGroup: source.toolkit.fluxcd.io
             kind: HelmRepository
             name: appscode-charts-oci
-          version: v0.17.0
+          version: sha256:aaf28169f478e3fcc1901d32203d689abac4236ae36203c43c2ae88ec772baaa
         enforceQuota: true
         flow: standalone-edit
         icons:
@@ -127,6 +142,7 @@ spec:
           type: image/svg+xml
         name: Storage
         operationId: edit-self-storage-autoscaler
+        partOf: Scale Storage
       name: Autoscaling
     - items:
       - editor:
@@ -135,9 +151,10 @@ spec:
             apiGroup: source.toolkit.fluxcd.io
             kind: HelmRepository
             name: appscode-charts-oci
-          version: v0.17.0
+          version: sha256:0025bd9b7316f7cd472ffba8104839bbf1fb451ce25481e7750b28740bd57698
         enforceQuota: false
         flow: standalone-create
+        icon: hugeicons:security-check
         icons:
         - src: https://cdn.appscode.com/k8s/icons/action-icons/configure.svg
           type: image/svg+xml
@@ -149,9 +166,10 @@ spec:
             apiGroup: source.toolkit.fluxcd.io
             kind: HelmRepository
             name: appscode-charts-oci
-          version: v0.17.0
+          version: sha256:aaf28169f478e3fcc1901d32203d689abac4236ae36203c43c2ae88ec772baaa
         enforceQuota: false
         flow: standalone-edit
+        icon: hugeicons:presentation-line-chart-01
         icons:
         - src: https://cdn.appscode.com/k8s/icons/action-icons/monitor.svg
           type: image/svg+xml
@@ -164,7 +182,7 @@ spec:
         apiGroup: source.toolkit.fluxcd.io
         kind: HelmRepository
         name: appscode-charts-oci
-      version: v0.17.0
+      version: sha256:aaf28169f478e3fcc1901d32203d689abac4236ae36203c43c2ae88ec772baaa
     enforceQuota: true
     options:
       name: kubedbcom-perconaxtradb-editor-options
@@ -172,7 +190,7 @@ spec:
         apiGroup: source.toolkit.fluxcd.io
         kind: HelmRepository
         name: appscode-charts-oci
-      version: v0.17.0
+      version: sha256:6bbb6140ba719408c7e80c5ff11db96b87aec8e3580f1db2fd83d4c14cb8c6ce
   variants:
   - name: default
     selector:

@@ -1,7 +1,6 @@
 apiVersion: ui.k8s.appscode.com/v1alpha1
 kind: ResourceEditor
 metadata:
-  creationTimestamp: null
   labels:
     k8s.io/group: catalog.appscode.com
     k8s.io/kind: MemcachedBinding
@@ -27,5 +26,5 @@ spec:
         apiGroup: source.toolkit.fluxcd.io
         kind: HelmRepository
         name: appscode-charts-oci
-      version: v0.17.0
+      version: sha256:faee67ed133114119fd78b10973f4d7f7ae1d6bf65ae906c0381e7fce795d1a6
     enforceQuota: false

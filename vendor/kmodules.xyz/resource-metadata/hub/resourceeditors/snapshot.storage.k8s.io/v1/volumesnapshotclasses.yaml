@@ -1,7 +1,6 @@
 apiVersion: ui.k8s.appscode.com/v1alpha1
 kind: ResourceEditor
 metadata:
-  creationTimestamp: null
   labels:
     k8s.io/group: snapshot.storage.k8s.io
     k8s.io/kind: VolumeSnapshotClass
@@ -22,5 +21,5 @@ spec:
         apiGroup: source.toolkit.fluxcd.io
         kind: HelmRepository
         name: appscode-charts-oci
-      version: v0.17.0
+      version: sha256:f5083aa38a3b973a91ac5fccdddf44c6e44a24a1b2bda223525d2f54fdb85fc2
     enforceQuota: false

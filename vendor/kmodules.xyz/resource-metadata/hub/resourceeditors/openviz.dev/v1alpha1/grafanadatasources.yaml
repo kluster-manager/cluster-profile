@@ -1,7 +1,6 @@
 apiVersion: ui.k8s.appscode.com/v1alpha1
 kind: ResourceEditor
 metadata:
-  creationTimestamp: null
   labels:
     k8s.io/group: openviz.dev
     k8s.io/kind: GrafanaDatasource
@@ -22,5 +21,5 @@ spec:
         apiGroup: source.toolkit.fluxcd.io
         kind: HelmRepository
         name: appscode-charts-oci
-      version: v0.17.0
+      version: sha256:a58d0d9371e0d62b41333a71517abe823e37d37d6320e7400ec067a58d8cb598
     enforceQuota: false

@@ -1,7 +1,6 @@
 apiVersion: ui.k8s.appscode.com/v1alpha1
 kind: ResourceEditor
 metadata:
-  creationTimestamp: null
   labels:
     k8s.io/group: monitoring.coreos.com
     k8s.io/kind: PrometheusAgent
@@ -22,5 +21,5 @@ spec:
         apiGroup: source.toolkit.fluxcd.io
         kind: HelmRepository
         name: appscode-charts-oci
-      version: v0.17.0
+      version: sha256:76b2ae66ef4edf9d80e408f2c67de5778df9ee968a3726e2acc6d75562e7351c
     enforceQuota: false

@@ -1,7 +1,6 @@
 apiVersion: ui.k8s.appscode.com/v1alpha1
 kind: ResourceEditor
 metadata:
-  creationTimestamp: null
   labels:
     k8s.io/group: engine.kubevault.com
     k8s.io/kind: MySQLRole
@@ -27,5 +26,5 @@ spec:
         apiGroup: source.toolkit.fluxcd.io
         kind: HelmRepository
         name: appscode-charts-oci
-      version: v0.17.0
+      version: sha256:badfec8d0b321c3e7d79e6a0aec3e85871b57115c5efca607246e745e1266c07
     enforceQuota: false

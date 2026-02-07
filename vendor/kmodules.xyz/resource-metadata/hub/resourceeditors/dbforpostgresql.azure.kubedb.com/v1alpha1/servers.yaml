@@ -1,7 +1,6 @@
 apiVersion: ui.k8s.appscode.com/v1alpha1
 kind: ResourceEditor
 metadata:
-  creationTimestamp: null
   labels:
     k8s.io/group: dbforpostgresql.azure.kubedb.com
     k8s.io/kind: Server
@@ -22,5 +21,5 @@ spec:
         apiGroup: source.toolkit.fluxcd.io
         kind: HelmRepository
         name: appscode-charts-oci
-      version: v0.17.0
+      version: sha256:8649803df001701b3f34879066fbd2bc27561bc39041c56a9f654f8f655ff5d2
     enforceQuota: false

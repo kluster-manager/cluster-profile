@@ -1,7 +1,6 @@
 apiVersion: ui.k8s.appscode.com/v1alpha1
 kind: ResourceEditor
 metadata:
-  creationTimestamp: null
   labels:
     k8s.io/group: gitops.kubedb.com
     k8s.io/kind: Pgpool
@@ -15,3 +14,12 @@ spec:
     name: pgpools
     scope: Namespaced
     version: v1alpha1
+  ui:
+    editor:
+      name: gitopskubedbcom-pgpool-editor
+      sourceRef:
+        apiGroup: source.toolkit.fluxcd.io
+        kind: HelmRepository
+        name: appscode-charts-oci
+      version: sha256:885b77ca6503d3766809d0106a0960838629030b9b18553c637e91e6f33c6d9f
+    enforceQuota: false

@@ -59,7 +59,7 @@ func (s *Server) PatchImpl(store *APIStorage, codec runtime.Codec, r *http.Reque
 		return nil, err
 	}
 
-	defer r.Body.Close()
+	defer r.Body.Close() // nolint:errcheck
 	patchBytes, err := io.ReadAll(r.Body)
 	if err != nil {
 		return nil, err
@@ -135,7 +135,7 @@ func (s *Server) applyJSPatch(codec runtime.Codec, gvk schema.GroupVersionKind, 
 		}
 
 		originalObjMap := currentObject.UnstructuredContent()
-		patchMap := make(map[string]interface{})
+		patchMap := make(map[string]any)
 		var strictErrs []error
 		if validationDirective == metav1.FieldValidationWarn || validationDirective == metav1.FieldValidationStrict {
 			strictErrs, err = kjson.UnmarshalStrict(patchBytes, &patchMap)

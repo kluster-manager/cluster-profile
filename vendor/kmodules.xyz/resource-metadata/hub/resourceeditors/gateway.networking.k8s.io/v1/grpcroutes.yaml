@@ -1,7 +1,6 @@
 apiVersion: ui.k8s.appscode.com/v1alpha1
 kind: ResourceEditor
 metadata:
-  creationTimestamp: null
   labels:
     k8s.io/group: gateway.networking.k8s.io
     k8s.io/kind: GRPCRoute
@@ -22,5 +21,5 @@ spec:
         apiGroup: source.toolkit.fluxcd.io
         kind: HelmRepository
         name: appscode-charts-oci
-      version: v0.17.0
+      version: sha256:c165221dd4a41149aae82f07084dc2f46a382f0d2e70cd45dd12920fcfecc314
     enforceQuota: false

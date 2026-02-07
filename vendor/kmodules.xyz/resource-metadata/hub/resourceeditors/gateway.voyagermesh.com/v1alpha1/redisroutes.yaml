@@ -1,7 +1,6 @@
 apiVersion: ui.k8s.appscode.com/v1alpha1
 kind: ResourceEditor
 metadata:
-  creationTimestamp: null
   labels:
     k8s.io/group: gateway.voyagermesh.com
     k8s.io/kind: RedisRoute
@@ -22,5 +21,5 @@ spec:
         apiGroup: source.toolkit.fluxcd.io
         kind: HelmRepository
         name: appscode-charts-oci
-      version: v0.17.0
+      version: sha256:b68e02acd1bf9b69646abd46e5328fd0aa2c15a8f20ccdd0991ac8917f5f1878
     enforceQuota: false

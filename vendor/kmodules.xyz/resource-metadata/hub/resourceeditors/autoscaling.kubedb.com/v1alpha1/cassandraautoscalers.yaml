@@ -1,7 +1,6 @@
 apiVersion: ui.k8s.appscode.com/v1alpha1
 kind: ResourceEditor
 metadata:
-  creationTimestamp: null
   labels:
     k8s.io/group: autoscaling.kubedb.com
     k8s.io/kind: CassandraAutoscaler
@@ -22,5 +21,5 @@ spec:
         apiGroup: source.toolkit.fluxcd.io
         kind: HelmRepository
         name: appscode-charts-oci
-      version: v0.17.0
+      version: sha256:ba10d6d927bda9e27c2599553b8e942538be71162783efbb7c9ef7c41c7c1c01
     enforceQuota: false

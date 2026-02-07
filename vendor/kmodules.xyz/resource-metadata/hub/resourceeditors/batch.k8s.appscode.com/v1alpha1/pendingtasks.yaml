@@ -1,0 +1,25 @@
+apiVersion: ui.k8s.appscode.com/v1alpha1
+kind: ResourceEditor
+metadata:
+  labels:
+    k8s.io/group: batch.k8s.appscode.com
+    k8s.io/kind: PendingTask
+    k8s.io/resource: pendingtasks
+    k8s.io/version: v1alpha1
+  name: batch.k8s.appscode.com-v1alpha1-pendingtasks
+spec:
+  resource:
+    group: batch.k8s.appscode.com
+    kind: PendingTask
+    name: pendingtasks
+    scope: Cluster
+    version: v1alpha1
+  ui:
+    editor:
+      name: batchk8sappscodecom-pendingtask-editor
+      sourceRef:
+        apiGroup: source.toolkit.fluxcd.io
+        kind: HelmRepository
+        name: appscode-charts-oci
+      version: sha256:4e8f11639aab4aba3e106b096fbfea8f3b66c5d1a2d69c0bc357301f59b9ab7d
+    enforceQuota: false

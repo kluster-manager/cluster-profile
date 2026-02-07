@@ -1,7 +1,6 @@
 apiVersion: ui.k8s.appscode.com/v1alpha1
 kind: ResourceEditor
 metadata:
-  creationTimestamp: null
   labels:
     k8s.io/group: ops.kubedb.com
     k8s.io/kind: ClickHouseOpsRequest
@@ -9,6 +8,11 @@ metadata:
     k8s.io/version: v1alpha1
   name: ops.kubedb.com-v1alpha1-clickhouseopsrequests
 spec:
+  icons:
+  - src: https://cdn.appscode.com/k8s/icons/ops.kubedb.com/clickhouseopsrequests.svg
+    type: image/svg+xml
+  - src: https://cdn.appscode.com/k8s/icons/ops.kubedb.com/clickhouseopsrequests.png
+    type: image/png
   resource:
     group: ops.kubedb.com
     kind: ClickHouseOpsRequest
@@ -22,5 +26,5 @@ spec:
         apiGroup: source.toolkit.fluxcd.io
         kind: HelmRepository
         name: appscode-charts-oci
-      version: v0.17.0
+      version: sha256:a80a7677b7d4bddb03e81f22b925f96c63f9cc13e9d0860063a6ed1297ccae6d
     enforceQuota: false

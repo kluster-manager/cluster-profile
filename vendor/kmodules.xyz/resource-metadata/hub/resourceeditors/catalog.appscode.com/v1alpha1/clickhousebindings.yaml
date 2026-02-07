@@ -1,7 +1,6 @@
 apiVersion: ui.k8s.appscode.com/v1alpha1
 kind: ResourceEditor
 metadata:
-  creationTimestamp: null
   labels:
     k8s.io/group: catalog.appscode.com
     k8s.io/kind: ClickHouseBinding
@@ -9,6 +8,11 @@ metadata:
     k8s.io/version: v1alpha1
   name: catalog.appscode.com-v1alpha1-clickhousebindings
 spec:
+  icons:
+  - src: https://cdn.appscode.com/k8s/icons/catalog.appscode.com/clickhousebindings.svg
+    type: image/svg+xml
+  - src: https://cdn.appscode.com/k8s/icons/catalog.appscode.com/clickhousebindings.png
+    type: image/png
   resource:
     group: catalog.appscode.com
     kind: ClickHouseBinding
@@ -22,5 +26,5 @@ spec:
         apiGroup: source.toolkit.fluxcd.io
         kind: HelmRepository
         name: appscode-charts-oci
-      version: v0.17.0
+      version: sha256:adf0c9a9d41a25dc30491be2aa57a6d0b5f8e85b4d4d33df1eb34da6471733e7
     enforceQuota: false

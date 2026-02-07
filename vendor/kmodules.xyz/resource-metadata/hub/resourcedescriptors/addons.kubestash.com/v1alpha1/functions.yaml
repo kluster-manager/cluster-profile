@@ -1,7 +1,6 @@
 apiVersion: meta.k8s.appscode.com/v1alpha1
 kind: ResourceDescriptor
 metadata:
-  creationTimestamp: null
   labels:
     k8s.io/group: addons.kubestash.com
     k8s.io/kind: Function
@@ -115,6 +114,23 @@ spec:
                                 type: string
                             required:
                             - fieldPath
+                            type: object
+                            x-kubernetes-map-type: atomic
+                          fileKeyRef:
+                            properties:
+                              key:
+                                type: string
+                              optional:
+                                default: false
+                                type: boolean
+                              path:
+                                type: string
+                              volumeName:
+                                type: string
+                            required:
+                            - key
+                            - path
+                            - volumeName
                             type: object
                             x-kubernetes-map-type: atomic
                           resourceFieldRef:
@@ -307,6 +323,8 @@ spec:
                           - port
                           type: object
                       type: object
+                    stopSignal:
+                      type: string
                   type: object
                 livenessProbe:
                   properties:

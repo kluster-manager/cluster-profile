@@ -1,7 +1,6 @@
 apiVersion: meta.k8s.appscode.com/v1alpha1
 kind: ResourceDescriptor
 metadata:
-  creationTimestamp: null
   labels:
     k8s.io/group: meta.k8s.appscode.com
     k8s.io/kind: ResourceLayout
@@ -288,6 +287,16 @@ spec:
                         - type
                         type: object
                       type: array
+                    sort:
+                      properties:
+                        fieldName:
+                          type: string
+                        order:
+                          enum:
+                          - Ascending
+                          - Descending
+                          type: string
+                      type: object
                   type: object
                 width:
                   type: integer
@@ -538,6 +547,16 @@ spec:
                                       - type
                                       type: object
                                     type: array
+                                  sort:
+                                    properties:
+                                      fieldName:
+                                        type: string
+                                      order:
+                                        enum:
+                                        - Ascending
+                                        - Descending
+                                        type: string
+                                    type: object
                                 type: object
                               width:
                                 type: integer
@@ -796,6 +815,16 @@ spec:
                                     - type
                                     type: object
                                   type: array
+                                sort:
+                                  properties:
+                                    fieldName:
+                                      type: string
+                                    order:
+                                      enum:
+                                      - Ascending
+                                      - Descending
+                                      type: string
+                                  type: object
                               type: object
                             width:
                               type: integer
@@ -1031,6 +1060,16 @@ spec:
                                     - type
                                     type: object
                                   type: array
+                                sort:
+                                  properties:
+                                    fieldName:
+                                      type: string
+                                    order:
+                                      enum:
+                                      - Ascending
+                                      - Descending
+                                      type: string
+                                  type: object
                               type: object
                             width:
                               type: integer
@@ -1302,6 +1341,16 @@ spec:
                         - type
                         type: object
                       type: array
+                    sort:
+                      properties:
+                        fieldName:
+                          type: string
+                        order:
+                          enum:
+                          - Ascending
+                          - Descending
+                          type: string
+                      type: object
                   type: object
                 width:
                   type: integer

@@ -1,7 +1,6 @@
 apiVersion: meta.k8s.appscode.com/v1alpha1
 kind: ResourceDescriptor
 metadata:
-  creationTimestamp: null
   labels:
     k8s.io/group: project.openshift.io
     k8s.io/kind: Project
@@ -15,6 +14,3 @@ spec:
     name: projects
     scope: Namespaced
     version: v1
-  validation:
-    openAPIV3Schema:
-      type: object

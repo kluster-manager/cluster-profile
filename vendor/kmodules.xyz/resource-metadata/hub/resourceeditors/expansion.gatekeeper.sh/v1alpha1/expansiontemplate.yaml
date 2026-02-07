@@ -1,7 +1,6 @@
 apiVersion: ui.k8s.appscode.com/v1alpha1
 kind: ResourceEditor
 metadata:
-  creationTimestamp: null
   labels:
     k8s.io/group: expansion.gatekeeper.sh
     k8s.io/kind: ExpansionTemplate
@@ -22,5 +21,5 @@ spec:
         apiGroup: source.toolkit.fluxcd.io
         kind: HelmRepository
         name: appscode-charts-oci
-      version: v0.17.0
+      version: sha256:ae10fb2ffd9bf34dbabb483e4f70dc88f1d0432455b102e0223630ea57de8db0
     enforceQuota: false

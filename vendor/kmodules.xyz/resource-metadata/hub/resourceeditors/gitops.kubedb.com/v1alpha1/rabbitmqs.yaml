@@ -1,7 +1,6 @@
 apiVersion: ui.k8s.appscode.com/v1alpha1
 kind: ResourceEditor
 metadata:
-  creationTimestamp: null
   labels:
     k8s.io/group: gitops.kubedb.com
     k8s.io/kind: RabbitMQ
@@ -15,3 +14,12 @@ spec:
     name: rabbitmqs
     scope: Namespaced
     version: v1alpha1
+  ui:
+    editor:
+      name: gitopskubedbcom-rabbitmq-editor
+      sourceRef:
+        apiGroup: source.toolkit.fluxcd.io
+        kind: HelmRepository
+        name: appscode-charts-oci
+      version: sha256:4e90bee626f04417114c0d395e2d7ca702e5cb13d366c1e92e9009e838ddab2b
+    enforceQuota: false

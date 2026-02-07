@@ -1,7 +1,6 @@
 apiVersion: ui.k8s.appscode.com/v1alpha1
 kind: ResourceEditor
 metadata:
-  creationTimestamp: null
   labels:
     k8s.io/group: gateway.voyagermesh.com
     k8s.io/kind: MSSQLServerRoute
@@ -15,3 +14,12 @@ spec:
     name: mssqlserverroutes
     scope: Namespaced
     version: v1alpha1
+  ui:
+    editor:
+      name: gatewayvoyagermeshcom-mssqlserverroute-editor
+      sourceRef:
+        apiGroup: source.toolkit.fluxcd.io
+        kind: HelmRepository
+        name: appscode-charts-oci
+      version: sha256:578030c1e135234dfecb1d9a72aee73c042529d48861875433bcc4a60a302bc0
+    enforceQuota: false

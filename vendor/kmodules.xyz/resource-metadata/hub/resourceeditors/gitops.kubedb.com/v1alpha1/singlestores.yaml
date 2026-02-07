@@ -1,7 +1,6 @@
 apiVersion: ui.k8s.appscode.com/v1alpha1
 kind: ResourceEditor
 metadata:
-  creationTimestamp: null
   labels:
     k8s.io/group: gitops.kubedb.com
     k8s.io/kind: Singlestore
@@ -15,3 +14,12 @@ spec:
     name: singlestores
     scope: Namespaced
     version: v1alpha1
+  ui:
+    editor:
+      name: gitopskubedbcom-singlestore-editor
+      sourceRef:
+        apiGroup: source.toolkit.fluxcd.io
+        kind: HelmRepository
+        name: appscode-charts-oci
+      version: sha256:1bdcd25f4d45195632ee00c0f70f002f32b587fe104c72c58157421c7d9687ea
+    enforceQuota: false

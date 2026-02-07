@@ -1,7 +1,6 @@
 apiVersion: meta.k8s.appscode.com/v1alpha1
 kind: ResourceDescriptor
 metadata:
-  creationTimestamp: null
   labels:
     k8s.io/group: addons.kubestash.com
     k8s.io/kind: Addon
@@ -67,13 +66,15 @@ spec:
                     - enum:
                       - Restic
                       - WalG
-                      - Medusa
                       - VolumeSnapshotter
+                      - Solr
+                      - Medusa
                     - enum:
                       - Restic
                       - WalG
                       - Medusa
                       - VolumeSnapshotter
+                      - Solr
                     type: string
                   executor:
                     enum:
@@ -738,6 +739,25 @@ spec:
                                               type: object
                                             type: array
                                             x-kubernetes-list-type: atomic
+                                        type: object
+                                      podCertificate:
+                                        properties:
+                                          certificateChainPath:
+                                            type: string
+                                          credentialBundlePath:
+                                            type: string
+                                          keyPath:
+                                            type: string
+                                          keyType:
+                                            type: string
+                                          maxExpirationSeconds:
+                                            format: int32
+                                            type: integer
+                                          signerName:
+                                            type: string
+                                        required:
+                                        - keyType
+                                        - signerName
                                         type: object
                                       secret:
                                         properties:
@@ -1070,13 +1090,15 @@ spec:
                     - enum:
                       - Restic
                       - WalG
-                      - Medusa
                       - VolumeSnapshotter
+                      - Solr
+                      - Medusa
                     - enum:
                       - Restic
                       - WalG
                       - Medusa
                       - VolumeSnapshotter
+                      - Solr
                     type: string
                   executor:
                     enum:
@@ -1741,6 +1763,25 @@ spec:
                                               type: object
                                             type: array
                                             x-kubernetes-list-type: atomic
+                                        type: object
+                                      podCertificate:
+                                        properties:
+                                          certificateChainPath:
+                                            type: string
+                                          credentialBundlePath:
+                                            type: string
+                                          keyPath:
+                                            type: string
+                                          keyType:
+                                            type: string
+                                          maxExpirationSeconds:
+                                            format: int32
+                                            type: integer
+                                          signerName:
+                                            type: string
+                                        required:
+                                        - keyType
+                                        - signerName
                                         type: object
                                       secret:
                                         properties:

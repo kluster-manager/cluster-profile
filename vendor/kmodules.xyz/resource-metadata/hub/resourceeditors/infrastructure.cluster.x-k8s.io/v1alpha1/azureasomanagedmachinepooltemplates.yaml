@@ -1,7 +1,6 @@
 apiVersion: ui.k8s.appscode.com/v1alpha1
 kind: ResourceEditor
 metadata:
-  creationTimestamp: null
   labels:
     k8s.io/group: infrastructure.cluster.x-k8s.io
     k8s.io/kind: AzureASOManagedMachinePoolTemplate
@@ -22,5 +21,5 @@ spec:
         apiGroup: source.toolkit.fluxcd.io
         kind: HelmRepository
         name: appscode-charts-oci
-      version: v0.17.0
+      version: sha256:b37d0592ef35c6f5af73a4b1b32dcbec85a7f230d366f7c53048ee9521401d96
     enforceQuota: false

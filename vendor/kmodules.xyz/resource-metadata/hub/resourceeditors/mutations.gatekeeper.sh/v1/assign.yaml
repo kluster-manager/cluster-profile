@@ -1,7 +1,6 @@
 apiVersion: ui.k8s.appscode.com/v1alpha1
 kind: ResourceEditor
 metadata:
-  creationTimestamp: null
   labels:
     k8s.io/group: mutations.gatekeeper.sh
     k8s.io/kind: Assign
@@ -22,5 +21,5 @@ spec:
         apiGroup: source.toolkit.fluxcd.io
         kind: HelmRepository
         name: appscode-charts-oci
-      version: v0.17.0
+      version: sha256:2d4ae3886e6450608e737046b333485fe1b2bdd2cd4d18e5141ca433a61d3280
     enforceQuota: false

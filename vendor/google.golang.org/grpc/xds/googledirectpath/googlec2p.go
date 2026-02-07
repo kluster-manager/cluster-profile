@@ -38,6 +38,7 @@ import (
 	"google.golang.org/grpc/internal/googlecloud"
 	internalgrpclog "google.golang.org/grpc/internal/grpclog"
 	"google.golang.org/grpc/internal/xds/bootstrap"
+	"google.golang.org/grpc/internal/xds/xdsclient"
 	"google.golang.org/grpc/resolver"
 
 	_ "google.golang.org/grpc/xds" // To register xds resolvers and balancers.
@@ -62,8 +63,9 @@ var (
 	universeDomainMu sync.Mutex
 	universeDomain   = ""
 	// For overriding in unittests.
-	onGCE   = googlecloud.OnGCE
-	randInt = rand.Int
+	onGCE         = googlecloud.OnGCE
+	randInt       = rand.Int
+	xdsClientPool = xdsclient.DefaultPool
 )
 
 func init() {
@@ -155,9 +157,11 @@ func (c2pResolverBuilder) Build(t resolver.Target, cc resolver.ClientConn, opts 
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal bootstrap configuration: %v", err)
 	}
-	if err := bootstrap.SetFallbackBootstrapConfig(cfgJSON); err != nil {
-		return nil, fmt.Errorf("failed to set fallback bootstrap configuration: %v", err)
+	config, err := bootstrap.NewConfigFromContents(cfgJSON)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse bootstrap contents: %s, %v", string(cfgJSON), err)
 	}
+	xdsClientPool.SetFallbackBootstrapConfig(config)
 
 	t = resolver.Target{
 		URL: url.URL{
@@ -177,6 +181,13 @@ func newNodeConfig(zone string, ipv6Capable bool) map[string]any {
 	node := map[string]any{
 		"id":       fmt.Sprintf("C2P-%d", randInt()),
 		"locality": map[string]any{"zone": zone},
+	}
+	if envconfig.NewPickFirstEnabled {
+		// Enable dualstack endpoints in TD.
+		// TODO(https://github.com/grpc/grpc-go/issues/8561): remove IPv6 metadata server queries entirely after old pick first is removed.
+		ipv6Capable = true
+	} else {
+		logger.Infof("GRPC_EXPERIMENTAL_ENABLE_NEW_PICK_FIRST is disabled, setting ipv6Capable node metadata based on metadata server query")
 	}
 	if ipv6Capable {
 		node["metadata"] = map[string]any{ipv6CapableMetadataName: true}

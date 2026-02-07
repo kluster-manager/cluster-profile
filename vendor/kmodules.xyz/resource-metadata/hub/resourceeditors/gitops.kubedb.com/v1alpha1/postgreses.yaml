@@ -1,7 +1,6 @@
 apiVersion: ui.k8s.appscode.com/v1alpha1
 kind: ResourceEditor
 metadata:
-  creationTimestamp: null
   labels:
     k8s.io/group: gitops.kubedb.com
     k8s.io/kind: Postgres
@@ -15,3 +14,12 @@ spec:
     name: postgreses
     scope: Namespaced
     version: v1alpha1
+  ui:
+    editor:
+      name: gitopskubedbcom-postgres-editor
+      sourceRef:
+        apiGroup: source.toolkit.fluxcd.io
+        kind: HelmRepository
+        name: appscode-charts-oci
+      version: sha256:1e1911bcb8337d4416e429ae196dc47fcd7513f96a679ddf30291169d1b3d6dc
+    enforceQuota: false

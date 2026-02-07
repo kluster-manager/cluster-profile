@@ -1,7 +1,6 @@
 apiVersion: ui.k8s.appscode.com/v1alpha1
 kind: ResourceEditor
 metadata:
-  creationTimestamp: null
   labels:
     k8s.io/group: cluster.open-cluster-management.io
     k8s.io/kind: ManagedClusterSetBinding
@@ -22,5 +21,5 @@ spec:
         apiGroup: source.toolkit.fluxcd.io
         kind: HelmRepository
         name: appscode-charts-oci
-      version: v0.17.0
+      version: sha256:b9c7770091c5d0e3c12fed301b6c2b5ecf4b7711fc8f6e777fcad3daeff0a232
     enforceQuota: false
