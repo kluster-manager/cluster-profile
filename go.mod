@@ -21,8 +21,8 @@ require (
 	k8s.io/kubectl v0.34.3
 	k8s.io/utils v0.0.0-20251002143259-bc988d571ff4
 	kmodules.xyz/client-go v0.34.2
-	kmodules.xyz/fake-apiserver v0.0.8
-	kmodules.xyz/resource-metadata v0.41.2
+	kmodules.xyz/fake-apiserver v0.0.9
+	kmodules.xyz/resource-metadata v0.42.3
 	kubepack.dev/lib-app v0.17.0
 	kubepack.dev/lib-helm v0.34.1
 	open-cluster-management.io/api v1.2.0
@@ -120,7 +120,7 @@ require (
 	github.com/fxamacker/cbor/v2 v2.9.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.11 // indirect
 	github.com/ghodss/yaml v1.0.0 // indirect
-	github.com/go-chi/chi/v5 v5.2.2 // indirect
+	github.com/go-chi/chi/v5 v5.2.5 // indirect
 	github.com/go-errors/errors v1.5.1 // indirect
 	github.com/go-gorp/gorp/v3 v3.1.0 // indirect
 	github.com/go-jose/go-jose/v4 v4.1.2 // indirect

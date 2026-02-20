@@ -68,7 +68,7 @@ type Server struct {
 	checkedVersion  int64
 }
 
-func NewOptions(apigroups ...string) *Options {
+func NewOptions(fakeOpenShift bool, apigroups ...string) *Options {
 	var (
 		// Scheme defines methods for serializing and deserializing API objects.
 		scheme         = runtime.NewScheme()
@@ -92,11 +92,15 @@ func NewOptions(apigroups ...string) *Options {
 		&metav1.APIResourceList{},
 	)
 
+	includeAPIGroups := sets.NewString(apigroups...)
+	if fakeOpenShift {
+		includeAPIGroups.Insert("project.openshift.io")
+	}
 	return &Options{
 		Scheme:               scheme,
 		NegotiatedSerializer: codecs,
 		ParameterCodec:       parameterCodec,
-		IncludeAPIGroups:     sets.NewString(apigroups...),
+		IncludeAPIGroups:     includeAPIGroups,
 	}
 }
 
