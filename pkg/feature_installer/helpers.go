@@ -82,57 +82,20 @@ type FakeServer struct {
 
 func GetAPIGroups() []string {
 	return []string{
-		"addon.open-cluster-management.io",
-		"appcatalog.appscode.com",
-		"auditor.appscode.com",
-		"autoscaling.kubedb.com",
-		"aws.kubeform.com",
-		"azure.kubeform.com",
-		"catalog.kubedb.com",
-		"catalog.kubevault.com",
-		"catalog.kubeware.dev",
-		"charts.x-helm.dev",
-		"cluster.open-cluster-management.io",
-		"dashboard.kubedb.com",
-		"drivers.x-helm.dev",
-		"external-dns.appscode.com",
-		"falco.appscode.com",
-		"gcp.kubeform.com",
 		"helm.toolkit.fluxcd.io",
-		"kubedb.com",
-		"kubevault.com",
-		"monitoring.coreos.com",
-		"openviz.dev",
-		"operator.open-cluster-management.io",
-		"ops.kubedb.com",
-		"ops.kubevault.com",
-		"policy.kubevault.com",
-		"postgres.kubedb.com",
-		"products.x-helm.dev",
-		"repositories.stash.appscode.com",
-		"schema.kubedb.com",
-		"secrets.crossplane.io",
 		"source.toolkit.fluxcd.io",
-		"stash.appscode.com",
-		"status.gatekeeper.sh",
-		"supervisor.appscode.com",
-		"ui.k8s.appscode.com",
-		"ui.kubedb.com",
-		"ui.stash.appscode.com",
-		"work.open-cluster-management.io",
 	}
 }
 
 func initializeFakeServer(profileBinding *profilev1alpha1.ManagedClusterProfileBinding) (*http.Server, *pkg.Server, *rest.Config, *api.Config) {
-	apiGroups := GetAPIGroups()
-
+	var fakeOpenShift bool
 	if profileBinding != nil && profileBinding.Spec.Features != nil {
 		if _, ok := profileBinding.Spec.Features["aceshifter"]; ok {
-			apiGroups = append(apiGroups, "project.openshift.io")
+			fakeOpenShift = true
 		}
 	}
 
-	opts := pkg.NewOptions(apiGroups...)
+	opts := pkg.NewOptions(fakeOpenShift, GetAPIGroups()...)
 
 	s := pkg.NewServer(opts)
 	srv, restcfg, err := s.Run()
