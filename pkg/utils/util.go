@@ -24,11 +24,11 @@ import (
 )
 
 func init() {
-	gob.Register(map[string]interface{}{})
-	gob.Register([]interface{}{})
+	gob.Register(map[string]any{})
+	gob.Register([]any{})
 }
 
-func DeepCopyMap(m map[string]interface{}) (map[string]interface{}, error) {
+func DeepCopyMap(m map[string]any) (map[string]any, error) {
 	var buf bytes.Buffer
 	enc := gob.NewEncoder(&buf)
 	dec := gob.NewDecoder(&buf)
@@ -36,7 +36,7 @@ func DeepCopyMap(m map[string]interface{}) (map[string]interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	var cp map[string]interface{}
+	var cp map[string]any
 	err = dec.Decode(&cp)
 	if err != nil {
 		return nil, err

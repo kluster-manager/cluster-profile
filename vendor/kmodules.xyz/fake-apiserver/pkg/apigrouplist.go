@@ -23,9 +23,9 @@ import (
 	"kmodules.xyz/apiversion"
 	"kmodules.xyz/resource-metadata/apis/meta/v1alpha1"
 
-	"gomodules.xyz/sets"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/sets"
 )
 
 func (s *Server) APIGroupList(w http.ResponseWriter, r *http.Request) {
@@ -110,7 +110,7 @@ func (s *Server) APIGroupList(w http.ResponseWriter, r *http.Request) {
 		}
 	*/
 
-	groups := map[string]sets.String{}
+	groups := map[string]sets.Set[string]{}
 	s.reg.Visit(func(_ string, rd *v1alpha1.ResourceDescriptor) {
 		if rd.Spec.Resource.Name == "" {
 			return
@@ -122,7 +122,7 @@ func (s *Server) APIGroupList(w http.ResponseWriter, r *http.Request) {
 
 		apiGroup, exists := groups[rd.Spec.Resource.Group]
 		if !exists {
-			apiGroup = sets.NewString()
+			apiGroup = sets.New[string]()
 		}
 		apiGroup.Insert(rd.Spec.Resource.Version)
 		groups[rd.Spec.Resource.Group] = apiGroup

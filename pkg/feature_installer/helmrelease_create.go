@@ -33,7 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func CreateHelmRelease(featureName, featureSetName, ns string, profile *profilev1alpha1.ManagedClusterSetProfile, featureObj uiapi.Feature, fakeServer *FakeServer, values map[string]interface{}) error {
+func CreateHelmRelease(featureName, featureSetName, ns string, profile *profilev1alpha1.ManagedClusterSetProfile, featureObj uiapi.Feature, fakeServer *FakeServer, values map[string]any) error {
 	hr := &fluxhelm.HelmRelease{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      featureName,

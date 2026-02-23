@@ -207,7 +207,7 @@ func updateManifestWork(ctx context.Context, fakeServer *FakeServer, kc client.C
 			continue
 		}
 
-		metadata := item.Object["metadata"].(map[string]interface{})
+		metadata := item.Object["metadata"].(map[string]any)
 		delete(metadata, "resourceVersion")
 
 		if err = utils.Copy(item.Object, &m); err != nil {
@@ -297,7 +297,7 @@ func featureToBeEnabled(feature string, values map[string]any) (bool, error) {
 	return ok, err
 }
 
-func GetDefaultValues(reg repo.IRegistry, chartRef releasesapi.ChartSourceRef) (map[string]interface{}, error) {
+func GetDefaultValues(reg repo.IRegistry, chartRef releasesapi.ChartSourceRef) (map[string]any, error) {
 	chart, err := reg.GetChart(chartRef)
 	if err != nil {
 		return nil, err
@@ -305,7 +305,7 @@ func GetDefaultValues(reg repo.IRegistry, chartRef releasesapi.ChartSourceRef) (
 	return chart.Values, nil
 }
 
-func GetKindNameNamespace(item map[string]interface{}) (string, string, string, error) {
+func GetKindNameNamespace(item map[string]any) (string, string, string, error) {
 	unstructuredObj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&item)
 	if err != nil {
 		return "", "", "", err
