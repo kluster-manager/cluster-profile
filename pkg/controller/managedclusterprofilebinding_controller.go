@@ -65,13 +65,13 @@ func (r *ManagedClusterProfileBindingReconciler) Reconcile(ctx context.Context, 
 	logger.Info("Start reconciling")
 
 	profileBinding := &profilev1alpha1.ManagedClusterProfileBinding{}
-	err := r.Client.Get(ctx, req.NamespacedName, profileBinding)
+	err := r.Get(ctx, req.NamespacedName, profileBinding)
 	if err != nil {
 		return reconcile.Result{}, client.IgnoreNotFound(err)
 	}
 
 	profile := &profilev1alpha1.ManagedClusterSetProfile{}
-	err = r.Client.Get(ctx, types.NamespacedName{Name: profileBinding.Spec.ProfileRef.Name}, profile)
+	err = r.Get(ctx, types.NamespacedName{Name: profileBinding.Spec.ProfileRef.Name}, profile)
 	if err != nil {
 		return reconcile.Result{}, client.IgnoreNotFound(err)
 	}
@@ -171,7 +171,7 @@ func (r *ManagedClusterProfileBindingReconciler) mapClusterProfileToClusterProfi
 func (r *ManagedClusterProfileBindingReconciler) setOpscenterFeaturesVersion(ctx context.Context, profileBinding *profilev1alpha1.ManagedClusterProfileBinding, upgradeTime string, err error) error {
 	var pb profilev1alpha1.ManagedClusterProfileBinding
 	// Re-fetch the latest version of the Account object
-	if err := r.Client.Get(ctx, client.ObjectKeyFromObject(profileBinding), &pb); err != nil && !errors.IsNotFound(err) {
+	if err := r.Get(ctx, client.ObjectKeyFromObject(profileBinding), &pb); err != nil && !errors.IsNotFound(err) {
 		return fmt.Errorf("failed to get latest account object: %w", err)
 	}
 
@@ -196,7 +196,7 @@ func setOpscenterFeaturesVersion(ctx context.Context, kc client.Client, profileB
 		return ""
 	}
 	for _, m := range mw.Spec.Workload.Manifests {
-		object := map[string]interface{}{}
+		object := map[string]any{}
 		if err := utils.Copy(m, &object); err != nil {
 			return ""
 		}

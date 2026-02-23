@@ -15,3 +15,12 @@ spec:
     name: mongodbs
     scope: Namespaced
     version: v1alpha1
+  ui:
+    editor:
+      name: gitopskubedbcom-mongodb-editor
+      sourceRef:
+        apiGroup: source.toolkit.fluxcd.io
+        kind: HelmRepository
+        name: appscode-charts-oci
+      version: sha256:fb5c51b762a4aa45b0363bb99d8591ddf1bc8b8598eca363e04599b82cd3f5e5
+    enforceQuota: false

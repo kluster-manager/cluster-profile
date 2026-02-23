@@ -15,3 +15,12 @@ spec:
     name: redissentinels
     scope: Namespaced
     version: v1alpha1
+  ui:
+    editor:
+      name: gitopskubedbcom-redissentinel-editor
+      sourceRef:
+        apiGroup: source.toolkit.fluxcd.io
+        kind: HelmRepository
+        name: appscode-charts-oci
+      version: sha256:6700ed5c88ebff4fb06cc72f1e721d3d5e2cf6c604adaecbb7948666db845a0e
+    enforceQuota: false

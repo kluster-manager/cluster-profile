@@ -15,3 +15,12 @@ spec:
     name: memcacheds
     scope: Namespaced
     version: v1alpha1
+  ui:
+    editor:
+      name: gitopskubedbcom-memcached-editor
+      sourceRef:
+        apiGroup: source.toolkit.fluxcd.io
+        kind: HelmRepository
+        name: appscode-charts-oci
+      version: sha256:53ee686dfe2ca4cc90c50cc7d77411f9e8e2bc9266f92a0460b5c143ecb6956d
+    enforceQuota: false

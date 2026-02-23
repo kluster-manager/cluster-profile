@@ -82,57 +82,20 @@ type FakeServer struct {
 
 func GetAPIGroups() []string {
 	return []string{
-		"addon.open-cluster-management.io",
-		"appcatalog.appscode.com",
-		"auditor.appscode.com",
-		"autoscaling.kubedb.com",
-		"aws.kubeform.com",
-		"azure.kubeform.com",
-		"catalog.kubedb.com",
-		"catalog.kubevault.com",
-		"catalog.kubeware.dev",
-		"charts.x-helm.dev",
-		"cluster.open-cluster-management.io",
-		"dashboard.kubedb.com",
-		"drivers.x-helm.dev",
-		"external-dns.appscode.com",
-		"falco.appscode.com",
-		"gcp.kubeform.com",
 		"helm.toolkit.fluxcd.io",
-		"kubedb.com",
-		"kubevault.com",
-		"monitoring.coreos.com",
-		"openviz.dev",
-		"operator.open-cluster-management.io",
-		"ops.kubedb.com",
-		"ops.kubevault.com",
-		"policy.kubevault.com",
-		"postgres.kubedb.com",
-		"products.x-helm.dev",
-		"repositories.stash.appscode.com",
-		"schema.kubedb.com",
-		"secrets.crossplane.io",
 		"source.toolkit.fluxcd.io",
-		"stash.appscode.com",
-		"status.gatekeeper.sh",
-		"supervisor.appscode.com",
-		"ui.k8s.appscode.com",
-		"ui.kubedb.com",
-		"ui.stash.appscode.com",
-		"work.open-cluster-management.io",
 	}
 }
 
 func initializeFakeServer(profileBinding *profilev1alpha1.ManagedClusterProfileBinding) (*http.Server, *pkg.Server, *rest.Config, *api.Config) {
-	apiGroups := GetAPIGroups()
-
+	var fakeOpenShift bool
 	if profileBinding != nil && profileBinding.Spec.Features != nil {
 		if _, ok := profileBinding.Spec.Features["aceshifter"]; ok {
-			apiGroups = append(apiGroups, "project.openshift.io")
+			fakeOpenShift = true
 		}
 	}
 
-	opts := pkg.NewOptions(apiGroups...)
+	opts := pkg.NewOptions(fakeOpenShift, GetAPIGroups()...)
 
 	s := pkg.NewServer(opts)
 	srv, restcfg, err := s.Run()
@@ -244,7 +207,7 @@ func updateManifestWork(ctx context.Context, fakeServer *FakeServer, kc client.C
 			continue
 		}
 
-		metadata := item.Object["metadata"].(map[string]interface{})
+		metadata := item.Object["metadata"].(map[string]any)
 		delete(metadata, "resourceVersion")
 
 		if err = utils.Copy(item.Object, &m); err != nil {
@@ -334,7 +297,7 @@ func featureToBeEnabled(feature string, values map[string]any) (bool, error) {
 	return ok, err
 }
 
-func GetDefaultValues(reg repo.IRegistry, chartRef releasesapi.ChartSourceRef) (map[string]interface{}, error) {
+func GetDefaultValues(reg repo.IRegistry, chartRef releasesapi.ChartSourceRef) (map[string]any, error) {
 	chart, err := reg.GetChart(chartRef)
 	if err != nil {
 		return nil, err
@@ -342,7 +305,7 @@ func GetDefaultValues(reg repo.IRegistry, chartRef releasesapi.ChartSourceRef) (
 	return chart.Values, nil
 }
 
-func GetKindNameNamespace(item map[string]interface{}) (string, string, string, error) {
+func GetKindNameNamespace(item map[string]any) (string, string, string, error) {
 	unstructuredObj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&item)
 	if err != nil {
 		return "", "", "", err

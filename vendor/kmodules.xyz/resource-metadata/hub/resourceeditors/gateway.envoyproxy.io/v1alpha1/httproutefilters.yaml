@@ -15,3 +15,12 @@ spec:
     name: httproutefilters
     scope: Namespaced
     version: v1alpha1
+  ui:
+    editor:
+      name: gatewayenvoyproxyio-httproutefilter-editor
+      sourceRef:
+        apiGroup: source.toolkit.fluxcd.io
+        kind: HelmRepository
+        name: appscode-charts-oci
+      version: sha256:a30299e495edbfbd2cdfabf2bdc64c135eecd4dbfc1676c569fea005609a7bf1
+    enforceQuota: false

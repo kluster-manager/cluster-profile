@@ -76,9 +76,17 @@ spec:
               properties:
                 secretRef:
                   properties:
-                    name:
+                    apiGroup:
                       default: ""
                       type: string
+                    kind:
+                      default: Secret
+                      type: string
+                    name:
+                      type: string
+                  required:
+                  - kind
+                  - name
                   type: object
                   x-kubernetes-map-type: atomic
               type: object
@@ -110,6 +118,15 @@ spec:
                 member:
                   format: int32
                   type: integer
+              type: object
+            migration:
+              properties:
+                oldPVReclaimPolicy:
+                  type: string
+                storageClassName:
+                  type: string
+              required:
+              - storageClassName
               type: object
             replicationModeTransformation:
               properties:
@@ -345,6 +362,7 @@ spec:
               - ReconfigureTLS
               - RotateAuth
               - ReplicationModeTransformation
+              - StorageMigration
               type: string
             updateVersion:
               properties:

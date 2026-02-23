@@ -46,7 +46,7 @@ func (s *Server) DeleteImpl(store *APIStorage, r *http.Request) (*unstructured.U
 		return nil, err
 	}
 
-	defer r.Body.Close()
+	defer r.Body.Close() // nolint:errcheck
 
 	key := types.NamespacedName{
 		Namespace: chi.URLParam(r, "namespace"),

@@ -1,0 +1,31 @@
+apiVersion: ui.k8s.appscode.com/v1alpha1
+kind: ResourceEditor
+metadata:
+  creationTimestamp: null
+  labels:
+    k8s.io/group: ops.kubedb.com
+    k8s.io/kind: CassandraOpsRequest
+    k8s.io/resource: cassandraopsrequests
+    k8s.io/version: v1alpha1
+  name: ops.kubedb.com-v1alpha1-cassandraopsrequests
+spec:
+  icons:
+  - src: https://cdn.appscode.com/k8s/icons/ops.kubedb.com/cassandraopsrequests.svg
+    type: image/svg+xml
+  - src: https://cdn.appscode.com/k8s/icons/ops.kubedb.com/cassandraopsrequests.png
+    type: image/png
+  resource:
+    group: ops.kubedb.com
+    kind: CassandraOpsRequest
+    name: cassandraopsrequests
+    scope: Namespaced
+    version: v1alpha1
+  ui:
+    editor:
+      name: opskubedbcom-cassandraopsrequest-editor
+      sourceRef:
+        apiGroup: source.toolkit.fluxcd.io
+        kind: HelmRepository
+        name: appscode-charts-oci
+      version: sha256:7127bc92262050f6cbc7c6ea8511e6f8e30336a6a5078ff5c8a2ede26d2a4ced
+    enforceQuota: false

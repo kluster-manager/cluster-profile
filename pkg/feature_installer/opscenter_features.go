@@ -35,8 +35,8 @@ import (
 	releasesapi "x-helm.dev/apimachinery/apis/releases/v1alpha1"
 )
 
-func InstallOpscenterFeaturesOnFakeServer(fakeServer *FakeServer, profile *profilev1alpha1.ManagedClusterSetProfile, profileBinding *profilev1alpha1.ManagedClusterProfileBinding, clusterMetadata *kmapi.ClusterInfo, chartRef *releasesapi.ChartSourceRef) (map[string]interface{}, error) {
-	overrides := make(map[string]interface{})
+func InstallOpscenterFeaturesOnFakeServer(fakeServer *FakeServer, profile *profilev1alpha1.ManagedClusterSetProfile, profileBinding *profilev1alpha1.ManagedClusterProfileBinding, clusterMetadata *kmapi.ClusterInfo, chartRef *releasesapi.ChartSourceRef) (map[string]any, error) {
+	overrides := make(map[string]any)
 	if profile.Spec.Features["opscenter-features"].Chart.SourceRef.Name != "" {
 		chart := profile.Spec.Features["opscenter-features"].Chart
 		chartRef = &releasesapi.ChartSourceRef{
@@ -81,9 +81,9 @@ func InstallOpscenterFeaturesOnFakeServer(fakeServer *FakeServer, profile *profi
 	return overrides, nil
 }
 
-func GetOverrideValues(overrides map[string]interface{}, clusterMetadata *kmapi.ClusterInfo) (map[string]interface{}, error) {
+func GetOverrideValues(overrides map[string]any, clusterMetadata *kmapi.ClusterInfo) (map[string]any, error) {
 	if clusterMetadata != nil {
-		overrides["clusterMetadata"] = map[string]interface{}{
+		overrides["clusterMetadata"] = map[string]any{
 			"uid":  clusterMetadata.UID,
 			"name": clusterMetadata.Name,
 		}

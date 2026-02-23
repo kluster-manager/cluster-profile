@@ -64,7 +64,7 @@ func UpgradeCluster(profileBinding *profilev1alpha1.ManagedClusterProfileBinding
 		SourceRef: hub.BootstrapHelmRepository(fakeServer.FakeClient),
 	}
 
-	var overrideValues map[string]interface{}
+	var overrideValues map[string]any
 	if profileBinding.Spec.Features == nil || profileBinding.Spec.Features[hub.ChartOpscenterFeatures].Values == nil {
 		return errors.New("no values found in profileBinding")
 	}
@@ -98,7 +98,7 @@ func UpgradeCluster(profileBinding *profilev1alpha1.ManagedClusterProfileBinding
 	}
 
 	for i, m := range mw.Spec.Workload.Manifests {
-		object := map[string]interface{}{}
+		object := map[string]any{}
 		if err = utils.Copy(m, &object); err != nil {
 			return err
 		}
@@ -168,7 +168,7 @@ func UpgradeCluster(profileBinding *profilev1alpha1.ManagedClusterProfileBinding
 		}
 
 		for j, m := range mwList.Items[i].Spec.Workload.Manifests {
-			object := map[string]interface{}{}
+			object := map[string]any{}
 			if err = utils.Copy(m, &object); err != nil {
 				return err
 			}
@@ -190,7 +190,7 @@ func UpgradeCluster(profileBinding *profilev1alpha1.ManagedClusterProfileBinding
 				continue
 			}
 
-			var currValues map[string]interface{}
+			var currValues map[string]any
 			skipManagedClusterSetProfileValues := false
 			if profileBinding.Spec.Features != nil {
 				if _, exist := profileBinding.Spec.Features[hr.Name]; exist {
@@ -216,7 +216,7 @@ func UpgradeCluster(profileBinding *profilev1alpha1.ManagedClusterProfileBinding
 			if err := fakeServer.FakeClient.Get(context.Background(), types.NamespacedName{Name: hr.Name}, &feature); err != nil {
 				return err
 			}
-			var featureValues map[string]interface{}
+			var featureValues map[string]any
 			if feature.Spec.Values != nil {
 				if err := json.Unmarshal(feature.Spec.Values.Raw, &featureValues); err != nil {
 					return err

@@ -15,3 +15,12 @@ spec:
     name: pgpools
     scope: Namespaced
     version: v1alpha1
+  ui:
+    editor:
+      name: gitopskubedbcom-pgpool-editor
+      sourceRef:
+        apiGroup: source.toolkit.fluxcd.io
+        kind: HelmRepository
+        name: appscode-charts-oci
+      version: sha256:095c71f650d4fc4ac2f2ba5035bc1f47a50567c78d97180ae2b665610e2e1f7e
+    enforceQuota: false

@@ -63,7 +63,7 @@ func (r *ManagedClusterSetProfileReconciler) Reconcile(ctx context.Context, req 
 	logger.Info("Start reconciling")
 
 	profile := &profilev1alpha1.ManagedClusterSetProfile{}
-	err := r.Client.Get(ctx, req.NamespacedName, profile)
+	err := r.Get(ctx, req.NamespacedName, profile)
 	if err != nil {
 		return reconcile.Result{}, client.IgnoreNotFound(err)
 	}
@@ -114,7 +114,7 @@ func (r *ManagedClusterSetProfileReconciler) Reconcile(ctx context.Context, req 
 		}
 
 		var profileBindingList profilev1alpha1.ManagedClusterProfileBindingList
-		err = r.Client.List(ctx, &profileBindingList, &client.ListOptions{
+		err = r.List(ctx, &profileBindingList, &client.ListOptions{
 			Namespace: cluster.Name,
 		})
 		if err != nil {

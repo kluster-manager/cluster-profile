@@ -30,6 +30,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilrand "k8s.io/apimachinery/pkg/util/rand"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 )
@@ -55,7 +56,7 @@ func (s *Server) CreateImpl(store *APIStorage, codec runtime.Codec, r *http.Requ
 		return nil, err
 	}
 
-	defer r.Body.Close()
+	defer r.Body.Close() // nolint:errcheck
 	data, err := io.ReadAll(r.Body)
 	if err != nil {
 		return nil, err
@@ -108,6 +109,19 @@ func (s *Server) CreateImpl(store *APIStorage, codec runtime.Codec, r *http.Requ
 			return nil, err
 		}
 	} else if store.GVK == apiextensionsv1.SchemeGroupVersion.WithKind("CustomResourceDefinition") {
+		var crd apiextensionsv1.CustomResourceDefinition
+		err := runtime.DefaultUnstructuredConverter.FromUnstructured(obj.UnstructuredContent(), &crd)
+		if err != nil {
+			return nil, err
+		}
+		gvr := schema.GroupVersionResource{
+			Group:    crd.Spec.Group,
+			Resource: crd.Spec.Names.Plural,
+			Version:  crd.Spec.Versions[0].Name,
+		}
+		if err := s.reg.RegisterGVR(gvr); err != nil {
+			return nil, err
+		}
 		err = resources.ProcessCRD(&obj)
 		if err != nil {
 			return nil, err

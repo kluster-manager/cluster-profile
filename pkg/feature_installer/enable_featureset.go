@@ -151,7 +151,7 @@ func enableFeatureSet(ctx context.Context, kc client.Client, featureSet string, 
 		return err
 	}
 
-	var overrideValues map[string]interface{}
+	var overrideValues map[string]any
 	if overrideValues, err = InstallOpscenterFeaturesOnFakeServer(fakeServer, profile, profileBinding, &profileBinding.Spec.ClusterMetadata, nil); err != nil {
 		return err
 	}
@@ -181,7 +181,7 @@ func enableFeatureSet(ctx context.Context, kc client.Client, featureSet string, 
 			return err
 		}
 
-		var mergedValues map[string]interface{}
+		var mergedValues map[string]any
 		if profileBinding.Spec.Features != nil && profileBinding.Spec.Features[hub.ChartOpscenterFeatures].Values != nil {
 			err := json.Unmarshal(profileBinding.Spec.Features[hub.ChartOpscenterFeatures].Values.Raw, &mergedValues)
 			if err != nil {
@@ -229,7 +229,7 @@ func applyFeatureSet(ctx context.Context, kc client.Client, mw *workv1.ManifestW
 
 		if profileBinding.Spec.Features != nil {
 			if _, exist := profileBinding.Spec.Features[f]; exist {
-				var valuesMap map[string]interface{}
+				var valuesMap map[string]any
 				if profileBinding.Spec.Features[f].Values != nil {
 					if err = json.Unmarshal(profileBinding.Spec.Features[f].Values.Raw, &valuesMap); err != nil {
 						return err
@@ -247,7 +247,7 @@ func applyFeatureSet(ctx context.Context, kc client.Client, mw *workv1.ManifestW
 			return err
 		}
 
-		var valuesMap map[string]interface{}
+		var valuesMap map[string]any
 		if profile.Spec.Features[f].Values != nil {
 			err = json.Unmarshal(profile.Spec.Features[f].Values.Raw, &valuesMap)
 			if err != nil {
@@ -345,7 +345,7 @@ func removeHRFomManifestWork(ctx context.Context, kc client.Client, mw *workv1.M
 	return nil
 }
 
-func applyResource(f cmdutil.Factory, reg repo.IRegistry, chartRef *releasesapi.ChartSourceRef, model map[string]interface{}) (*release.Release, error) {
+func applyResource(f cmdutil.Factory, reg repo.IRegistry, chartRef *releasesapi.ChartSourceRef, model map[string]any) (*release.Release, error) {
 	return handler.ApplyResource(f, reg, *chartRef, model, true)
 }
 
@@ -395,7 +395,7 @@ func applyCRDs(restConfig *rest.Config, reg repo.IRegistry, chartRef releasesapi
 	return nil
 }
 
-func GetFeatureSetValues(ctx context.Context, fs *uiapi.FeatureSet, features []string, releaseNamespace string, kc client.Client, mc *v1.ManagedCluster) (map[string]interface{}, error) {
+func GetFeatureSetValues(ctx context.Context, fs *uiapi.FeatureSet, features []string, releaseNamespace string, kc client.Client, mc *v1.ManagedCluster) (map[string]any, error) {
 	chart, curValues, err := getFeatureSetChartRef(kc, fs, releaseNamespace)
 	if err != nil {
 		return nil, err
@@ -422,7 +422,7 @@ func GetFeatureSetValues(ctx context.Context, fs *uiapi.FeatureSet, features []s
 	return curValues, nil
 }
 
-func getFeatureSetChartRef(kc client.Client, fs *uiapi.FeatureSet, releaseNamespace string) (*repo.ChartExtended, map[string]interface{}, error) {
+func getFeatureSetChartRef(kc client.Client, fs *uiapi.FeatureSet, releaseNamespace string) (*repo.ChartExtended, map[string]any, error) {
 	reg := NewVirtualRegistry(kc)
 	chart, err := reg.GetChart(fs.Spec.Chart)
 	if err != nil {
@@ -433,7 +433,7 @@ func getFeatureSetChartRef(kc client.Client, fs *uiapi.FeatureSet, releaseNamesp
 	if err != nil {
 		return nil, nil, err
 	}
-	curValues["resources"] = make(map[string]interface{})
+	curValues["resources"] = make(map[string]any)
 
 	err = setReleaseNameAndNamespace(fs, releaseNamespace, curValues)
 	if err != nil {
@@ -442,7 +442,7 @@ func getFeatureSetChartRef(kc client.Client, fs *uiapi.FeatureSet, releaseNamesp
 	return chart, curValues, nil
 }
 
-func setReleaseNameAndNamespace(fs *uiapi.FeatureSet, namespace string, values map[string]interface{}) error {
+func setReleaseNameAndNamespace(fs *uiapi.FeatureSet, namespace string, values map[string]any) error {
 	err := unstructured.SetNestedField(values, fs.Name, "metadata", "release", "name")
 	if err != nil {
 		return err
@@ -537,7 +537,7 @@ func ignoreNotFoundError(err error) error {
 	return err
 }
 
-func generateHelmReleaseForFeature(kc client.Client, fs *uiapi.FeatureSet, feature *uiapi.Feature, chart *repo.ChartExtended, curValues map[string]interface{}, mc *v1.ManagedCluster) error {
+func generateHelmReleaseForFeature(kc client.Client, fs *uiapi.FeatureSet, feature *uiapi.Feature, chart *repo.ChartExtended, curValues map[string]any, mc *v1.ManagedCluster) error {
 	featureKey := getFeaturePathInValues(feature.Name)
 	featureDefaultValue, _, err := unstructured.NestedMap(chart.Values, "resources", featureKey)
 	if err != nil {
@@ -564,8 +564,8 @@ func getFeaturePathInValues(feature string) string {
 	return fmt.Sprintf("helmToolkitFluxcdIoHelmRelease_%s", kstr.ReplaceAll(feature, "-", "_"))
 }
 
-func setLabelsToHelmReleases(fs *uiapi.FeatureSet, feature *uiapi.Feature, values map[string]interface{}) error {
-	label := map[string]interface{}{
+func setLabelsToHelmReleases(fs *uiapi.FeatureSet, feature *uiapi.Feature, values map[string]any) error {
+	label := map[string]any{
 		kmeta.ComponentLabelKey: feature.Name,
 		kmeta.PartOfLabelKey:    fs.Name,
 	}

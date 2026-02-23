@@ -15,3 +15,12 @@ spec:
     name: mssqlservers
     scope: Namespaced
     version: v1alpha1
+  ui:
+    editor:
+      name: gitopskubedbcom-mssqlserver-editor
+      sourceRef:
+        apiGroup: source.toolkit.fluxcd.io
+        kind: HelmRepository
+        name: appscode-charts-oci
+      version: sha256:d42c67e6a17e96cd2e92f68f0c300d48041e86fc6e4caa082668f843dbd95f22
+    enforceQuota: false

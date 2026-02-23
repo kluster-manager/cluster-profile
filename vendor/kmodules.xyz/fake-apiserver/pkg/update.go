@@ -50,7 +50,7 @@ func (s *Server) UpdateImpl(store *APIStorage, codec runtime.Codec, r *http.Requ
 		return nil, err
 	}
 
-	defer r.Body.Close()
+	defer r.Body.Close() // nolint:errcheck
 	data, err := io.ReadAll(r.Body)
 	if err != nil {
 		return nil, err
