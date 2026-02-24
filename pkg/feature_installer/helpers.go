@@ -90,10 +90,8 @@ func GetAPIGroups() []string {
 
 func initializeFakeServer(profileBinding *profilev1alpha1.ManagedClusterProfileBinding) (*http.Server, *pkg.Server, *rest.Config, *api.Config) {
 	var fakeOpenShift bool
-	if profileBinding != nil && profileBinding.Spec.Features != nil {
-		if slices.Contains(profileBinding.Spec.ClusterMetadata.ClusterManagers, "OpenShift") {
-			fakeOpenShift = true
-		}
+	if profileBinding != nil {
+		fakeOpenShift = slices.Contains(profileBinding.Spec.ClusterMetadata.ClusterManagers, kmapi.ClusterManagerOpenShift.Name())
 	}
 
 	opts := pkg.NewOptions(fakeOpenShift, GetAPIGroups()...)
