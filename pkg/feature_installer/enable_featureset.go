@@ -21,14 +21,14 @@ import (
 	pkgerr "errors"
 	"fmt"
 	"reflect"
-	kstr "strings"
+	"slices"
+	"strings"
 
 	profilev1alpha1 "github.com/kluster-manager/cluster-profile/apis/profile/v1alpha1"
 	"github.com/kluster-manager/cluster-profile/pkg/common"
 	"github.com/kluster-manager/cluster-profile/pkg/utils"
 
 	fluxhelm "github.com/fluxcd/helm-controller/api/v2"
-	"gomodules.xyz/x/strings"
 	"helm.sh/helm/v3/pkg/release"
 	crdv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	crd_cs "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
@@ -113,7 +113,7 @@ func EnableFeatures(ctx context.Context, kc client.Client, profileBinding *profi
 }
 
 func enableFeatureSet(ctx context.Context, kc client.Client, featureSet string, features []string, profile *profilev1alpha1.ManagedClusterSetProfile, profileBinding *profilev1alpha1.ManagedClusterProfileBinding) error {
-	if featureSet == "opscenter-core" && (!strings.Contains(features, "opscenter-features") || !strings.Contains(features, "kube-ui-server")) {
+	if featureSet == "opscenter-core" && (!slices.Contains(features, "opscenter-features") || !slices.Contains(features, "kube-ui-server")) {
 		return pkgerr.New("ensure opscenter-features and kube-ui-server are included in the feature list")
 	}
 
@@ -312,7 +312,7 @@ func removeHRFomManifestWork(ctx context.Context, kc client.Client, mw *workv1.M
 				return err
 			}
 
-			if !strings.Contains(features, name) {
+			if !slices.Contains(features, name) {
 				logger.Info(fmt.Sprintf("Removing HelmRelease manifest with name: %s", name))
 				continue
 			}
@@ -561,7 +561,7 @@ func generateHelmReleaseForFeature(kc client.Client, fs *uiapi.FeatureSet, featu
 }
 
 func getFeaturePathInValues(feature string) string {
-	return fmt.Sprintf("helmToolkitFluxcdIoHelmRelease_%s", kstr.ReplaceAll(feature, "-", "_"))
+	return fmt.Sprintf("helmToolkitFluxcdIoHelmRelease_%s", strings.ReplaceAll(feature, "-", "_"))
 }
 
 func setLabelsToHelmReleases(fs *uiapi.FeatureSet, feature *uiapi.Feature, values map[string]any) error {
@@ -596,8 +596,8 @@ func updateHelmReleaseDependency(ctx context.Context, kc client.Client, values m
 				continue
 			}
 
-			if featureMap != nil && !strings.Contains(featureMap.DisabledFeatures, reqFeature.Name) &&
-				!strings.Contains(featureMap.ExternallyManagedFeatures, reqFeature.Name) {
+			if featureMap != nil && !slices.Contains(featureMap.DisabledFeatures, reqFeature.Name) &&
+				!slices.Contains(featureMap.ExternallyManagedFeatures, reqFeature.Name) {
 				dependsOn = append(dependsOn, kmapi.ObjectReference{
 					Name: reqFeature.Name,
 				})
