@@ -23,6 +23,7 @@ import (
 	profilev1alpha1 "github.com/kluster-manager/cluster-profile/apis/profile/v1alpha1"
 	"github.com/kluster-manager/cluster-profile/pkg/utils"
 
+	"golang.org/x/exp/slices"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/json"
 	"k8s.io/client-go/tools/clientcmd"
@@ -107,6 +108,15 @@ func GetOverrideValues(overrides map[string]any, clusterMetadata *kmapi.ClusterI
 		}
 		if len(clusterMetadata.ClusterManagers) > 0 {
 			if err := unstructured.SetNestedStringSlice(overrides, clusterMetadata.ClusterManagers, "clusterMetadata", "clusterManagers"); err != nil {
+				return nil, err
+			}
+		}
+
+		if slices.Contains(clusterMetadata.ClusterManagers, kmapi.ClusterManagerOpenShift.Name()) {
+			if err := unstructured.SetNestedField(overrides, true, "distro", "openshift"); err != nil {
+				return nil, err
+			}
+			if err := unstructured.SetNestedField(overrides, "all", "distro", "ubi"); err != nil {
 				return nil, err
 			}
 		}
