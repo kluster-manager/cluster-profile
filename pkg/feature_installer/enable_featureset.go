@@ -81,7 +81,23 @@ func EnableFeatures(ctx context.Context, kc client.Client, profileBinding *profi
 	logger.Info(fmt.Sprintf("Profile: %s, ProfileBinding: %s, FeatureSetInfo: %+v", profile.Name, profileBinding.Name, featureInfo))
 
 	var err error
-	if err = enableFeatureSet(ctx, kc, "opscenter-core", featureInfo["opscenter-core"], profile, profileBinding); err != nil {
+	var fakeServer *FakeServer
+	if fakeServer, err = StartFakeApiServerAndApplyBaseManifestWorkReplicaSets(ctx, kc, profileBinding); err != nil {
+		return err
+	}
+
+	var overrideValues map[string]any
+	if overrideValues, err = InstallOpscenterFeaturesOnFakeServer(fakeServer, profile, profileBinding, &profileBinding.Spec.ClusterMetadata, nil); err != nil {
+		return err
+	}
+
+	fakeServer.FakeS.Checkpoint()
+
+	if err := RegisterRequiredCRDs(fakeServer, profileBinding); err != nil {
+		return err
+	}
+
+	if err = enableFeatureSet(ctx, kc, fakeServer, "opscenter-core", featureInfo["opscenter-core"], profile, profileBinding, overrideValues); err != nil {
 		return err
 	}
 	for fset, featureList := range featureInfo {
@@ -95,7 +111,7 @@ func EnableFeatures(ctx context.Context, kc client.Client, profileBinding *profi
 			return err
 		}
 
-		if err = enableFeatureSet(ctx, kc, fset, featureList, profile, profileBinding); err != nil {
+		if err = enableFeatureSet(ctx, kc, fakeServer, fset, featureList, profile, profileBinding, overrideValues); err != nil {
 			return err
 		}
 	}
@@ -112,7 +128,9 @@ func EnableFeatures(ctx context.Context, kc client.Client, profileBinding *profi
 	return nil
 }
 
-func enableFeatureSet(ctx context.Context, kc client.Client, featureSet string, features []string, profile *profilev1alpha1.ManagedClusterSetProfile, profileBinding *profilev1alpha1.ManagedClusterProfileBinding) error {
+func enableFeatureSet(ctx context.Context, kc client.Client, fakeServer *FakeServer, featureSet string, features []string,
+	profile *profilev1alpha1.ManagedClusterSetProfile, profileBinding *profilev1alpha1.ManagedClusterProfileBinding, overrideValues map[string]any,
+) error {
 	if featureSet == "opscenter-core" && (!slices.Contains(features, "opscenter-features") || !slices.Contains(features, "kube-ui-server")) {
 		return pkgerr.New("ensure opscenter-features and kube-ui-server are included in the feature list")
 	}
@@ -125,13 +143,7 @@ func enableFeatureSet(ctx context.Context, kc client.Client, featureSet string, 
 		return err
 	}
 
-	// <<<<<<<<       start fake-apiserver and apply base manifestWorkReplicaSet, feature-namespace manifestWork and helm install 'opscenter-features' chart       >>>>>>>
 	var err error
-	var fakeServer *FakeServer
-	if fakeServer, err = StartFakeApiServerAndApplyBaseManifestWorkReplicaSets(ctx, kc, profileBinding); err != nil {
-		return err
-	}
-
 	mw := &workv1.ManifestWork{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      featureSet,
@@ -148,19 +160,6 @@ func enableFeatureSet(ctx context.Context, kc client.Client, featureSet string, 
 
 	err = kc.Get(ctx, types.NamespacedName{Name: featureSet, Namespace: profileBinding.Namespace}, mw)
 	if err != nil && !errors.IsNotFound(err) {
-		return err
-	}
-
-	var overrideValues map[string]any
-	if overrideValues, err = InstallOpscenterFeaturesOnFakeServer(fakeServer, profile, profileBinding, &profileBinding.Spec.ClusterMetadata, nil); err != nil {
-		return err
-	}
-
-	fakeServer.FakeS.Checkpoint()
-
-	// <<<<<<<<       all necessary resources applied on fake-apiserver and set 'checkpoint' to differentiate modified objects       >>>>>>>
-
-	if err := RegisterRequiredCRDs(fakeServer, profileBinding); err != nil {
 		return err
 	}
 
@@ -207,7 +206,9 @@ func enableFeatureSet(ctx context.Context, kc client.Client, featureSet string, 
 	return applyFeatureSet(ctx, kc, mw, fakeServer, featureSet, features, profile, &mc, profileBinding)
 }
 
-func applyFeatureSet(ctx context.Context, kc client.Client, mw *workv1.ManifestWork, fakeServer *FakeServer, featureSet string, features []string, profile *profilev1alpha1.ManagedClusterSetProfile, mc *v1.ManagedCluster, profileBinding *profilev1alpha1.ManagedClusterProfileBinding) error {
+func applyFeatureSet(ctx context.Context, kc client.Client, mw *workv1.ManifestWork, fakeServer *FakeServer, featureSet string,
+	features []string, profile *profilev1alpha1.ManagedClusterSetProfile, mc *v1.ManagedCluster, profileBinding *profilev1alpha1.ManagedClusterProfileBinding,
+) error {
 	logger := klog.FromContext(ctx)
 	var err error
 	var fsObj uiapi.FeatureSet
