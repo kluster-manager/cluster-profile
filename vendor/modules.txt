@@ -2290,7 +2290,7 @@ kmodules.xyz/client-go/meta
 kmodules.xyz/client-go/tools/clientcmd
 kmodules.xyz/client-go/tools/parser
 kmodules.xyz/client-go/tools/wait
-# kmodules.xyz/fake-apiserver v0.1.1
+# kmodules.xyz/fake-apiserver v0.1.2-0.20260603085928-1e2a7d338994
 ## explicit; go 1.25
 kmodules.xyz/fake-apiserver/pkg
 kmodules.xyz/fake-apiserver/pkg/resources
