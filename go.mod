@@ -22,7 +22,7 @@ require (
 	k8s.io/kubectl v0.34.3
 	k8s.io/utils v0.0.0-20251002143259-bc988d571ff4
 	kmodules.xyz/client-go v0.34.3
-	kmodules.xyz/fake-apiserver v0.1.1
+	kmodules.xyz/fake-apiserver v0.1.2-0.20260603085928-1e2a7d338994
 	kmodules.xyz/resource-metadata v0.42.5
 	kubepack.dev/lib-app v0.17.0
 	kubepack.dev/lib-helm v0.34.1

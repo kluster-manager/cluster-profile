@@ -24,6 +24,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	meta_util "kmodules.xyz/client-go/meta"
 	rsapi "kmodules.xyz/resource-metadata/apis/meta/v1alpha1"
@@ -272,7 +273,7 @@ func (s *Server) Run() (*http.Server, *rest.Config, error) {
 	m := chi.NewRouter()
 	m.Use(middleware.RequestID)
 	m.Use(middleware.RealIP)
-	m.Use(middleware.Logger)
+	m.Use(klogRequestLogger)
 	m.Use(middleware.Recoverer)
 	s.Register(m)
 
@@ -357,6 +358,23 @@ func (s *Server) RemoveNamespace(ns string) {
 func atoi(s string) int {
 	i, _ := strconv.Atoi(s)
 	return i
+}
+
+// klogRequestLogger logs each HTTP request via klog at V(5). At lower verbosity,
+// requests are served silently so the fake-apiserver does not flood the controller logs with GET/POST lines.
+func klogRequestLogger(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !klog.V(5).Enabled() {
+			next.ServeHTTP(w, r)
+			return
+		}
+		ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
+		start := time.Now()
+		defer func() {
+			klog.V(5).Infof("%s %s %d %dB %s", r.Method, r.URL.RequestURI(), ww.Status(), ww.BytesWritten(), time.Since(start))
+		}()
+		next.ServeHTTP(ww, r)
+	})
 }
 
 type OutputSerializer struct {

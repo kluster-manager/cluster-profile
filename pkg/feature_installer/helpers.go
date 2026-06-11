@@ -182,11 +182,6 @@ func waitForReleaseToBeCreated(kc client.Client, name []string) error {
 
 func updateManifestWork(ctx context.Context, fakeServer *FakeServer, kc client.Client, mw *workv1.ManifestWork, profile *profilev1alpha1.ManagedClusterSetProfile) error {
 	logger := log.FromContext(ctx)
-	// fake-apiserver shutdown
-	if err := fakeServer.FakeSrv.Shutdown(ctx); err != nil {
-		return err
-	}
-	logger.Info("Server Exited Properly")
 
 	current, _ := fakeServer.FakeS.Export()
 	mw.Spec.Workload.Manifests = nil
@@ -255,6 +250,8 @@ func updateManifestWork(ctx context.Context, fakeServer *FakeServer, kc client.C
 	}
 
 	logger.Info(fmt.Sprintf("ManifestWork %s created or updated in namespace %s", mw.Name, mw.Namespace))
+
+	fakeServer.FakeS.Checkpoint()
 	return nil
 }
 
