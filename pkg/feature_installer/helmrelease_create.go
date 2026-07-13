@@ -78,7 +78,7 @@ func CreateHelmRelease(featureName, featureSetName, ns string, profile *profilev
 	}
 
 	if len(profile.Spec.Features[featureName].ValuesFrom) > 0 {
-		valuesFrom := make([]fluxhelm.ValuesReference, 0)
+		valuesFrom := make([]fluxhelm.ValuesReference, 0, len(profile.Spec.Features[featureName].ValuesFrom))
 		for _, vf := range profile.Spec.Features[featureName].ValuesFrom {
 			valuesFrom = append(valuesFrom, fluxhelm.ValuesReference{
 				Kind:      vf.Kind,
