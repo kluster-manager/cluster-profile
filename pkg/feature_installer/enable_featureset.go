@@ -220,7 +220,7 @@ func applyFeatureSet(ctx context.Context, kc client.Client, mw *workv1.ManifestW
 	if err = fakeServer.FakeClient.Get(ctx, types.NamespacedName{Name: featureSet}, &fsObj); err != nil {
 		return err
 	}
-	model, err := GetFeatureSetValues(ctx, &fsObj, features, hub.BootstrapHelmRepositoryNamespace(), fakeServer.FakeClient, mc)
+	model, err := GetFeatureSetValues(ctx, &fsObj, features, hub.BootstrapHelmRepositoryNamespace(), fakeServer.FakeClient, mc, profile)
 	if err != nil {
 		return err
 	}
@@ -401,7 +401,9 @@ func applyCRDs(restConfig *rest.Config, reg repo.IRegistry, chartRef releasesapi
 	return nil
 }
 
-func GetFeatureSetValues(ctx context.Context, fs *uiapi.FeatureSet, features []string, releaseNamespace string, kc client.Client, mc *v1.ManagedCluster) (map[string]any, error) {
+func GetFeatureSetValues(ctx context.Context, fs *uiapi.FeatureSet, features []string, releaseNamespace string,
+	kc client.Client, mc *v1.ManagedCluster, profile *profilev1alpha1.ManagedClusterSetProfile,
+) (map[string]any, error) {
 	chart, curValues, err := getFeatureSetChartRef(kc, fs, releaseNamespace)
 	if err != nil {
 		return nil, err
@@ -412,6 +414,9 @@ func GetFeatureSetValues(ctx context.Context, fs *uiapi.FeatureSet, features []s
 		err = kc.Get(ctx, client.ObjectKey{Name: features[i]}, feature, &client.GetOptions{})
 		if err != nil {
 			return nil, err
+		}
+		if featureSpec, found := profile.Spec.Features[feature.Name]; found && featureSpec.Chart.Name != "" {
+			feature.Spec.Chart = featureSpec.Chart
 		}
 		status, err := calculateFeatureStatus(ctx, kc, feature)
 		if err != nil {
