@@ -83,6 +83,9 @@ func (r *ManagedClusterSetProfileReconciler) Reconcile(ctx context.Context, req 
 		return reconcile.Result{}, err
 	}
 
+	if sel == nil {
+		return reconcile.Result{}, nil
+	}
 	var clusters clusterv1.ManagedClusterList
 	err = r.List(ctx, &clusters, client.MatchingLabelsSelector{Selector: sel})
 	if err != nil {
