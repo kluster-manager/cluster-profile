@@ -35,6 +35,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/json"
 	"k8s.io/apimachinery/pkg/util/rand"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/klog/v2"
 	kmapi "kmodules.xyz/client-go/api/v1"
 	cu "kmodules.xyz/client-go/client"
 	"kmodules.xyz/resource-metadata/hub"
@@ -73,33 +74,37 @@ func waitForHelmReleasesReady(kc client.Client, targets []upgradeTarget, configM
 	pending := slices.Clone(targets)
 
 	err := wait.PollUntilContextTimeout(context.Background(), interval, timeout, true, func(ctx context.Context) (bool, error) {
+		logger := klog.FromContext(ctx)
 		notReady := make([]upgradeTarget, 0, len(pending))
+		becameReady := false
 
 		for _, target := range pending {
 			var mw workv1.ManifestWork
 			if err := kc.Get(ctx, types.NamespacedName{Name: target.manifestWorkName, Namespace: target.manifestWorkNamespace}, &mw); err != nil {
-				return false, err
+				// The upgrade is already in flight on the spoke; a read error must not
+				// abort it, so keep the target pending and retry on the next tick.
+				logger.Error(err, "failed to read ManifestWork while waiting for HelmRelease", "manifestWork", klog.KRef(target.manifestWorkNamespace, target.manifestWorkName))
+				notReady = append(notReady, target)
+				continue
 			}
 
 			if helmReleaseReady(&mw, target.helmReleaseNamespace, target.helmReleaseName) {
 				configMap.Data[target.helmReleaseName] = string(metav1.ConditionTrue)
+				becameReady = true
 			} else {
 				notReady = append(notReady, target)
 			}
 		}
 
-		becameReady := len(notReady) < len(pending)
-		pending = notReady
-
 		if becameReady {
-			if _, err := cu.CreateOrPatch(ctx, kc, configMap, func(obj client.Object, createOp bool) client.Object {
-				in := obj.(*corev1.ConfigMap)
-				in.Data = configMap.Data
-				return in
-			}); err != nil {
-				return false, err
+			if err := patchConfigMapData(ctx, kc, configMap); err != nil {
+				// pending is left untouched so the marks are re-applied next tick.
+				logger.Error(err, "failed to mark HelmRelease(s) ready in upgrader ConfigMap", "configMap", klog.KObj(configMap))
+				return false, nil
 			}
 		}
+
+		pending = notReady
 
 		return len(pending) == 0, nil
 	})
