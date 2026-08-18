@@ -299,16 +299,15 @@ func UpgradeCluster(ctx context.Context, profileBinding *profilev1alpha1.Managed
 		return ctx.Err()
 	}
 
-	if err := waitForHelmReleasesReady(ctx, kc, upgradeTargets, configMap, helmReleaseReadyPollInterval, helmReleaseReadyTimeout); err != nil {
-		// An interrupted upgrade is unfinished, not failed: leave the ConfigMap
-		// pending so the next reconcile picks it up again.
-		if ctx.Err() != nil {
-			return err
-		}
-		configMap.Data["status"] = "failed"
-		return errors.Join(err, patchConfigMapData(ctx, kc, configMap))
+	waitErr := waitForHelmReleasesReady(ctx, kc, upgradeTargets, configMap, helmReleaseReadyPollInterval, helmReleaseReadyTimeout)
+	if waitErr != nil && ctx.Err() != nil {
+		// Interrupted, so the upgrade job never finished: leave the ConfigMap pending.
+		return waitErr
 	}
 
+	// "completed" only tells the UI that the upgrade job is done; whether it
+	// succeeded is read from the per-feature values, so it is set even when some
+	// features never became ready.
 	configMap.Data["status"] = "completed"
-	return patchConfigMapData(ctx, kc, configMap)
+	return errors.Join(waitErr, patchConfigMapData(ctx, kc, configMap))
 }
