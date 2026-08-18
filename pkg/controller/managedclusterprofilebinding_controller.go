@@ -178,6 +178,13 @@ func (r *ManagedClusterProfileBindingReconciler) setOpscenterFeaturesVersion(ctx
 		return fmt.Errorf("failed to get latest account object: %w", err)
 	}
 
+	// The observed version is read back from the already-patched ManifestWork, so
+	// advancing it after a failure would make needsUpgrade() false and the failed
+	// upgrade would never be retried.
+	if err != nil {
+		return err
+	}
+
 	pb.Status.ObservedOpscenterFeaturesVersion = setOpscenterFeaturesVersion(ctx, r.Client, pb.Namespace)
 	if upgradeTime != "" {
 		parsedTime, err := time.Parse(time.RFC3339, profileBinding.Annotations[common.UpgradeAnnotation])

@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/kluster-manager/cluster-profile/pkg/common"
@@ -66,8 +67,8 @@ func helmReleaseReady(mw *workv1.ManifestWork, hrNamespace, hrName string) bool 
 }
 
 // waitForHelmReleasesReady marks each target ready in configMap as it becomes
-// ready, until none are left or timeout elapses. A timeout isn't an error:
-// targets that never became ready are simply left "false".
+// ready, until none are left or timeout elapses. A timeout is an error: the
+// targets left "false" never became ready, so the upgrade did not succeed.
 func waitForHelmReleasesReady(kc client.Client, targets []upgradeTarget, configMap *corev1.ConfigMap, interval, timeout time.Duration) error {
 	pending := slices.Clone(targets)
 
@@ -102,10 +103,23 @@ func waitForHelmReleasesReady(kc client.Client, targets []upgradeTarget, configM
 
 		return len(pending) == 0, nil
 	})
-	if err != nil && !wait.Interrupted(err) {
-		return err
+	if wait.Interrupted(err) {
+		names := make([]string, 0, len(pending))
+		for _, target := range pending {
+			names = append(names, fmt.Sprintf("%s/%s", target.helmReleaseNamespace, target.helmReleaseName))
+		}
+		return fmt.Errorf("timed out after %s waiting for HelmRelease(s) to become ready: %s", timeout, strings.Join(names, ", "))
 	}
-	return nil
+	return err
+}
+
+func patchConfigMapData(ctx context.Context, kc client.Client, configMap *corev1.ConfigMap) error {
+	_, err := cu.CreateOrPatch(ctx, kc, configMap, func(obj client.Object, createOp bool) client.Object {
+		in := obj.(*corev1.ConfigMap)
+		in.Data = configMap.Data
+		return in
+	})
+	return err
 }
 
 func createConfigMapInSpokeClusterNamespace(kc client.Client, ver, clusterName string) (*corev1.ConfigMap, error) {

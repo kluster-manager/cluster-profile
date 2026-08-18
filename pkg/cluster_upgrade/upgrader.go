@@ -296,18 +296,10 @@ func UpgradeCluster(profileBinding *profilev1alpha1.ManagedClusterProfileBinding
 	time.Sleep(manifestWorkFeedbackWait)
 
 	if err := waitForHelmReleasesReady(kc, upgradeTargets, configMap, helmReleaseReadyPollInterval, helmReleaseReadyTimeout); err != nil {
-		return err
+		configMap.Data["status"] = "failed"
+		return errors.Join(err, patchConfigMapData(context.Background(), kc, configMap))
 	}
 
 	configMap.Data["status"] = "completed"
-	_, err = cu.CreateOrPatch(context.Background(), kc, configMap, func(obj client.Object, createOp bool) client.Object {
-		in := obj.(*corev1.ConfigMap)
-		in.Data = configMap.Data
-		return in
-	})
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return patchConfigMapData(context.Background(), kc, configMap)
 }
