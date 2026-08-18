@@ -24,5 +24,7 @@ const (
 	ACEUpgraderVersion = "ace.cloud.com/version"
 	UpgradeAnnotation  = "ace.cloud.com/upgradeAt"
 
-	HelmReleaseReadyFeedback = "Ready"
+	HelmReleaseReadyFeedback              = "Ready"
+	HelmReleaseGenerationFeedback         = "Generation"
+	HelmReleaseObservedGenerationFeedback = "ObservedGeneration"
 )

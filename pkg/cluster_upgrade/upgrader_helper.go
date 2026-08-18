@@ -44,27 +44,115 @@ import (
 	releasesapi "x-helm.dev/apimachinery/apis/releases/v1alpha1"
 )
 
-// helmReleaseReady reports whether mw's status shows the HelmRelease
-// identified by (hrNamespace, hrName) as applied and feedback-Ready.
-func helmReleaseReady(mw *workv1.ManifestWork, hrNamespace, hrName string) bool {
+func helmReleaseFeedback(mw *workv1.ManifestWork, hrNamespace, hrName string) ([]workv1.FeedbackValue, bool) {
 	for _, mc := range mw.Status.ResourceStatus.Manifests {
 		if mc.ResourceMeta.Kind != fluxhelm.HelmReleaseKind || mc.ResourceMeta.Name != hrName || mc.ResourceMeta.Namespace != hrNamespace {
 			continue
 		}
+		return mc.StatusFeedbacks.Values, meta.IsStatusConditionTrue(mc.Conditions, workv1.ManifestApplied)
+	}
+	return nil, false
+}
 
-		if !meta.IsStatusConditionTrue(mc.Conditions, workv1.ManifestApplied) {
-			return false
+func feedbackInt(values []workv1.FeedbackValue, name string) (int64, bool) {
+	for _, v := range values {
+		if v.Name == name && v.Value.Integer != nil {
+			return *v.Value.Integer, true
 		}
+	}
+	return 0, false
+}
 
-		for _, v := range mc.StatusFeedbacks.Values {
-			if v.Name == common.HelmReleaseReadyFeedback && v.Value.String != nil && *v.Value.String == string(metav1.ConditionTrue) {
-				return true
-			}
+func feedbackString(values []workv1.FeedbackValue, name string) (string, bool) {
+	for _, v := range values {
+		if v.Name == name && v.Value.String != nil {
+			return *v.Value.String, true
 		}
+	}
+	return "", false
+}
+
+// helmReleaseGeneration reports the spoke-side generation of the HelmRelease as
+// last synced back by the work agent, or 0 if it was never synced.
+func helmReleaseGeneration(mw *workv1.ManifestWork, hrNamespace, hrName string) int64 {
+	values, _ := helmReleaseFeedback(mw, hrNamespace, hrName)
+	generation, _ := feedbackInt(values, common.HelmReleaseGenerationFeedback)
+	return generation
+}
+
+// helmReleaseReady reports whether mw's status shows target's HelmRelease as
+// applied and Ready *for the spec this upgrade wrote*. Feedback values lag the
+// spec patch and flux keeps Ready=True until it notices the new spec, so a Ready
+// feedback alone can still describe the pre-upgrade release. The generation
+// feedback pins it down: it must have reached target.minGeneration (proving the
+// object is the one we wrote) and flux must have observed it (proving flux is
+// done with it, not about to start).
+func helmReleaseReady(mw *workv1.ManifestWork, target upgradeTarget) bool {
+	values, applied := helmReleaseFeedback(mw, target.helmReleaseNamespace, target.helmReleaseName)
+	if !applied {
 		return false
 	}
 
-	return false
+	if ready, ok := feedbackString(values, common.HelmReleaseReadyFeedback); !ok || ready != string(metav1.ConditionTrue) {
+		return false
+	}
+
+	generation, ok := feedbackInt(values, common.HelmReleaseGenerationFeedback)
+	if !ok || generation < target.minGeneration {
+		return false
+	}
+
+	observedGeneration, ok := feedbackInt(values, common.HelmReleaseObservedGenerationFeedback)
+	return ok && observedGeneration == generation
+}
+
+// ensureHelmReleaseFeedbackRules makes mw report back everything helmReleaseReady
+// needs for the given HelmRelease. The upgrade path never goes through
+// updateManifestWork, so a ManifestWork installed by an older build carries only
+// the rules it was created with.
+func ensureHelmReleaseFeedbackRules(mw *workv1.ManifestWork, hrNamespace, hrName string) {
+	rules := []workv1.FeedbackRule{
+		{
+			Type: workv1.JSONPathsType,
+			JsonPaths: []workv1.JsonPath{
+				{
+					Name: common.HelmReleaseReadyFeedback,
+					Path: `.status.conditions[?(@.type=="Ready")].status`,
+				},
+				{
+					Name: "Released",
+					Path: `.status.conditions[?(@.type=="Released")].status`,
+				},
+				{
+					Name: common.HelmReleaseGenerationFeedback,
+					Path: ".metadata.generation",
+				},
+				{
+					Name: common.HelmReleaseObservedGenerationFeedback,
+					Path: ".status.observedGeneration",
+				},
+			},
+		},
+	}
+
+	for i, config := range mw.Spec.ManifestConfigs {
+		if config.ResourceIdentifier.Resource == "helmreleases" &&
+			config.ResourceIdentifier.Name == hrName &&
+			config.ResourceIdentifier.Namespace == hrNamespace {
+			mw.Spec.ManifestConfigs[i].FeedbackRules = rules
+			return
+		}
+	}
+
+	mw.Spec.ManifestConfigs = append(mw.Spec.ManifestConfigs, workv1.ManifestConfigOption{
+		ResourceIdentifier: workv1.ResourceIdentifier{
+			Group:     fluxhelm.GroupVersion.Group,
+			Resource:  "helmreleases",
+			Name:      hrName,
+			Namespace: hrNamespace,
+		},
+		FeedbackRules: rules,
+	})
 }
 
 // waitForHelmReleasesReady marks each target ready in configMap as it becomes
@@ -88,7 +176,7 @@ func waitForHelmReleasesReady(ctx context.Context, kc client.Client, targets []u
 				continue
 			}
 
-			if helmReleaseReady(&mw, target.helmReleaseNamespace, target.helmReleaseName) {
+			if helmReleaseReady(&mw, target) {
 				configMap.Data[target.helmReleaseName] = string(metav1.ConditionTrue)
 				becameReady = true
 			} else {

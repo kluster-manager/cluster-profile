@@ -228,6 +228,14 @@ func updateManifestWork(ctx context.Context, fakeServer *FakeServer, kc client.C
 							Name: "Released",
 							Path: `.status.conditions[?(@.type=="Released")].status`,
 						},
+						{
+							Name: common.HelmReleaseGenerationFeedback,
+							Path: ".metadata.generation",
+						},
+						{
+							Name: common.HelmReleaseObservedGenerationFeedback,
+							Path: ".status.observedGeneration",
+						},
 					},
 				},
 			},
