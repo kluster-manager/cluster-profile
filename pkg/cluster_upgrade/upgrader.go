@@ -57,13 +57,13 @@ type upgradeTarget struct {
 	helmReleaseName       string
 }
 
-func UpgradeCluster(profileBinding *profilev1alpha1.ManagedClusterProfileBinding, profile *profilev1alpha1.ManagedClusterSetProfile, kc client.Client) error {
-	logger := klog.FromContext(context.Background())
+func UpgradeCluster(ctx context.Context, profileBinding *profilev1alpha1.ManagedClusterProfileBinding, profile *profilev1alpha1.ManagedClusterSetProfile, kc client.Client) error {
+	logger := klog.FromContext(ctx)
 	logger.Info(fmt.Sprintf("Upgrading Cluster: %s", profileBinding.Namespace))
 
 	var fakeServer *feature_installer.FakeServer
 	var err error
-	if fakeServer, err = feature_installer.StartFakeApiServerAndApplyBaseManifestWorkReplicaSets(context.Background(), kc, profileBinding); err != nil {
+	if fakeServer, err = feature_installer.StartFakeApiServerAndApplyBaseManifestWorkReplicaSets(ctx, kc, profileBinding); err != nil {
 		return err
 	}
 
@@ -103,11 +103,11 @@ func UpgradeCluster(profileBinding *profilev1alpha1.ManagedClusterProfileBinding
 	mergedValues := values.MergeMaps(defaultValues, overrideValues)
 
 	var mw workv1.ManifestWork
-	if err := kc.Get(context.Background(), types.NamespacedName{Name: "opscenter-core", Namespace: profileBinding.GetNamespace()}, &mw); err != nil {
+	if err := kc.Get(ctx, types.NamespacedName{Name: "opscenter-core", Namespace: profileBinding.GetNamespace()}, &mw); err != nil {
 		return err
 	}
 
-	configMap, err := createConfigMapInSpokeClusterNamespace(kc, profileBinding.Spec.OpscenterFeaturesVersion, profileBinding.Namespace)
+	configMap, err := createConfigMapInSpokeClusterNamespace(ctx, kc, profileBinding.Spec.OpscenterFeaturesVersion, profileBinding.Namespace)
 	if err != nil {
 		return err
 	}
@@ -159,7 +159,7 @@ func UpgradeCluster(profileBinding *profilev1alpha1.ManagedClusterProfileBinding
 				helmReleaseName:       hr.Name,
 			})
 
-			_, err := cu.CreateOrPatch(context.Background(), kc, &mw, func(obj client.Object, createOp bool) client.Object {
+			_, err := cu.CreateOrPatch(ctx, kc, &mw, func(obj client.Object, createOp bool) client.Object {
 				in := obj.(*workv1.ManifestWork)
 				in.Spec = mw.Spec
 				return in
@@ -168,7 +168,7 @@ func UpgradeCluster(profileBinding *profilev1alpha1.ManagedClusterProfileBinding
 				return err
 			}
 
-			_, err = cu.CreateOrPatch(context.Background(), kc, configMap, func(obj client.Object, createOp bool) client.Object {
+			_, err = cu.CreateOrPatch(ctx, kc, configMap, func(obj client.Object, createOp bool) client.Object {
 				in := obj.(*corev1.ConfigMap)
 				in.Data = configMap.Data
 				return in
@@ -181,7 +181,7 @@ func UpgradeCluster(profileBinding *profilev1alpha1.ManagedClusterProfileBinding
 	}
 
 	var mwList workv1.ManifestWorkList
-	if err := kc.List(context.Background(), &mwList, client.InNamespace(profileBinding.Namespace)); err != nil {
+	if err := kc.List(ctx, &mwList, client.InNamespace(profileBinding.Namespace)); err != nil {
 		return err
 	}
 
@@ -236,7 +236,7 @@ func UpgradeCluster(profileBinding *profilev1alpha1.ManagedClusterProfileBinding
 			}
 
 			var feature uiapi.Feature
-			if err := fakeServer.FakeClient.Get(context.Background(), types.NamespacedName{Name: hr.Name}, &feature); err != nil {
+			if err := fakeServer.FakeClient.Get(ctx, types.NamespacedName{Name: hr.Name}, &feature); err != nil {
 				return err
 			}
 			var featureValues map[string]any
@@ -274,7 +274,7 @@ func UpgradeCluster(profileBinding *profilev1alpha1.ManagedClusterProfileBinding
 				helmReleaseName:       hr.Name,
 			})
 		}
-		_, err := cu.CreateOrPatch(context.Background(), kc, &mwList.Items[i], func(obj client.Object, createOp bool) client.Object {
+		_, err := cu.CreateOrPatch(ctx, kc, &mwList.Items[i], func(obj client.Object, createOp bool) client.Object {
 			in := obj.(*workv1.ManifestWork)
 			in.Spec = mwList.Items[i].Spec
 			return in
@@ -283,7 +283,7 @@ func UpgradeCluster(profileBinding *profilev1alpha1.ManagedClusterProfileBinding
 			return err
 		}
 
-		_, err = cu.CreateOrPatch(context.Background(), kc, configMap, func(obj client.Object, createOp bool) client.Object {
+		_, err = cu.CreateOrPatch(ctx, kc, configMap, func(obj client.Object, createOp bool) client.Object {
 			in := obj.(*corev1.ConfigMap)
 			in.Data = configMap.Data
 			return in
@@ -293,13 +293,22 @@ func UpgradeCluster(profileBinding *profilev1alpha1.ManagedClusterProfileBinding
 		}
 	}
 
-	time.Sleep(manifestWorkFeedbackWait)
+	select {
+	case <-time.After(manifestWorkFeedbackWait):
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 
-	if err := waitForHelmReleasesReady(kc, upgradeTargets, configMap, helmReleaseReadyPollInterval, helmReleaseReadyTimeout); err != nil {
+	if err := waitForHelmReleasesReady(ctx, kc, upgradeTargets, configMap, helmReleaseReadyPollInterval, helmReleaseReadyTimeout); err != nil {
+		// An interrupted upgrade is unfinished, not failed: leave the ConfigMap
+		// pending so the next reconcile picks it up again.
+		if ctx.Err() != nil {
+			return err
+		}
 		configMap.Data["status"] = "failed"
-		return errors.Join(err, patchConfigMapData(context.Background(), kc, configMap))
+		return errors.Join(err, patchConfigMapData(ctx, kc, configMap))
 	}
 
 	configMap.Data["status"] = "completed"
-	return patchConfigMapData(context.Background(), kc, configMap)
+	return patchConfigMapData(ctx, kc, configMap)
 }

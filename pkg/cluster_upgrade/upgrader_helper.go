@@ -70,10 +70,10 @@ func helmReleaseReady(mw *workv1.ManifestWork, hrNamespace, hrName string) bool 
 // waitForHelmReleasesReady marks each target ready in configMap as it becomes
 // ready, until none are left or timeout elapses. A timeout is an error: the
 // targets left "false" never became ready, so the upgrade did not succeed.
-func waitForHelmReleasesReady(kc client.Client, targets []upgradeTarget, configMap *corev1.ConfigMap, interval, timeout time.Duration) error {
+func waitForHelmReleasesReady(ctx context.Context, kc client.Client, targets []upgradeTarget, configMap *corev1.ConfigMap, interval, timeout time.Duration) error {
 	pending := slices.Clone(targets)
 
-	err := wait.PollUntilContextTimeout(context.Background(), interval, timeout, true, func(ctx context.Context) (bool, error) {
+	err := wait.PollUntilContextTimeout(ctx, interval, timeout, true, func(ctx context.Context) (bool, error) {
 		logger := klog.FromContext(ctx)
 		notReady := make([]upgradeTarget, 0, len(pending))
 		becameReady := false
@@ -108,14 +108,22 @@ func waitForHelmReleasesReady(kc client.Client, targets []upgradeTarget, configM
 
 		return len(pending) == 0, nil
 	})
-	if wait.Interrupted(err) {
+	if err != nil {
 		names := make([]string, 0, len(pending))
 		for _, target := range pending {
 			names = append(names, fmt.Sprintf("%s/%s", target.helmReleaseNamespace, target.helmReleaseName))
 		}
-		return fmt.Errorf("timed out after %s waiting for HelmRelease(s) to become ready: %s", timeout, strings.Join(names, ", "))
+		// wait.Interrupted is also true for a cancelled parent context, so ask the
+		// parent whether this was a shutdown rather than a real timeout.
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			return fmt.Errorf("interrupted while waiting for HelmRelease(s) %s: %w", strings.Join(names, ", "), ctxErr)
+		}
+		if wait.Interrupted(err) {
+			return fmt.Errorf("timed out after %s waiting for HelmRelease(s) to become ready: %s", timeout, strings.Join(names, ", "))
+		}
+		return err
 	}
-	return err
+	return nil
 }
 
 func patchConfigMapData(ctx context.Context, kc client.Client, configMap *corev1.ConfigMap) error {
@@ -127,7 +135,7 @@ func patchConfigMapData(ctx context.Context, kc client.Client, configMap *corev1
 	return err
 }
 
-func createConfigMapInSpokeClusterNamespace(kc client.Client, ver, clusterName string) (*corev1.ConfigMap, error) {
+func createConfigMapInSpokeClusterNamespace(ctx context.Context, kc client.Client, ver, clusterName string) (*corev1.ConfigMap, error) {
 	var err error
 	cmData := make(map[string]string)
 	cmData["opscenter-features"] = string(metav1.ConditionFalse)
@@ -135,7 +143,7 @@ func createConfigMapInSpokeClusterNamespace(kc client.Client, ver, clusterName s
 	cmData["status"] = "pending"
 
 	var mwList workv1.ManifestWorkList
-	if err := kc.List(context.Background(), &mwList, client.InNamespace(clusterName)); err != nil {
+	if err := kc.List(ctx, &mwList, client.InNamespace(clusterName)); err != nil {
 		return nil, err
 	}
 	for _, mw := range mwList.Items {
@@ -184,7 +192,7 @@ func createConfigMapInSpokeClusterNamespace(kc client.Client, ver, clusterName s
 		Data: cmData,
 	}
 
-	if err = kc.Create(context.Background(), &cm); err != nil {
+	if err = kc.Create(ctx, &cm); err != nil {
 		return nil, err
 	}
 	return &cm, nil

@@ -103,7 +103,7 @@ func (r *ManagedClusterProfileBindingReconciler) Reconcile(ctx context.Context, 
 	}
 	if r.needsUpgrade(profileBinding) {
 		logger.Info("Triggering cluster upgrade")
-		if err := cluster_upgrade.UpgradeCluster(profileBinding, profile, r.Client); err != nil {
+		if err := cluster_upgrade.UpgradeCluster(ctx, profileBinding, profile, r.Client); err != nil {
 			return reconcile.Result{}, r.setOpscenterFeaturesVersion(ctx, profileBinding, upgradeTime, err)
 		}
 	} else if r.shouldEnableFeatures(profileBinding, profile) {
@@ -172,17 +172,17 @@ func (r *ManagedClusterProfileBindingReconciler) mapClusterProfileToClusterProfi
 }
 
 func (r *ManagedClusterProfileBindingReconciler) setOpscenterFeaturesVersion(ctx context.Context, profileBinding *profilev1alpha1.ManagedClusterProfileBinding, upgradeTime string, err error) error {
-	var pb profilev1alpha1.ManagedClusterProfileBinding
-	// Re-fetch the latest version of the Account object
-	if err := r.Get(ctx, client.ObjectKeyFromObject(profileBinding), &pb); err != nil && !errors.IsNotFound(err) {
-		return fmt.Errorf("failed to get latest account object: %w", err)
-	}
-
 	// The observed version is read back from the already-patched ManifestWork, so
 	// advancing it after a failure would make needsUpgrade() false and the failed
 	// upgrade would never be retried.
 	if err != nil {
 		return err
+	}
+
+	var pb profilev1alpha1.ManagedClusterProfileBinding
+	// Re-fetch the latest version of the Account object
+	if err := r.Get(ctx, client.ObjectKeyFromObject(profileBinding), &pb); err != nil && !errors.IsNotFound(err) {
+		return fmt.Errorf("failed to get latest account object: %w", err)
 	}
 
 	pb.Status.ObservedOpscenterFeaturesVersion = setOpscenterFeaturesVersion(ctx, r.Client, pb.Namespace)
