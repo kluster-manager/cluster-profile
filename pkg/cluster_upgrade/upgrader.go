@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	profilev1alpha1 "github.com/kluster-manager/cluster-profile/apis/profile/v1alpha1"
 	"github.com/kluster-manager/cluster-profile/pkg/feature_installer"
@@ -41,6 +42,20 @@ import (
 	klog "sigs.k8s.io/controller-runtime/pkg/log"
 	releasesapi "x-helm.dev/apimachinery/apis/releases/v1alpha1"
 )
+
+const manifestWorkFeedbackWait = 30 * time.Second
+
+const (
+	helmReleaseReadyPollInterval = 6 * time.Second
+	helmReleaseReadyTimeout      = 30 * time.Minute
+)
+
+type upgradeTarget struct {
+	manifestWorkNamespace string
+	manifestWorkName      string
+	helmReleaseNamespace  string
+	helmReleaseName       string
+}
 
 func UpgradeCluster(profileBinding *profilev1alpha1.ManagedClusterProfileBinding, profile *profilev1alpha1.ManagedClusterSetProfile, kc client.Client) error {
 	logger := klog.FromContext(context.Background())
@@ -97,6 +112,8 @@ func UpgradeCluster(profileBinding *profilev1alpha1.ManagedClusterProfileBinding
 		return err
 	}
 
+	var upgradeTargets []upgradeTarget
+
 	for i, m := range mw.Spec.Workload.Manifests {
 		object := map[string]any{}
 		if err = utils.Copy(m, &object); err != nil {
@@ -134,7 +151,13 @@ func UpgradeCluster(profileBinding *profilev1alpha1.ManagedClusterProfileBinding
 			}
 
 			mw.Spec.Workload.Manifests[i] = manifest
-			configMap.Data[hr.Name] = string(metav1.ConditionTrue)
+			configMap.Data[hr.Name] = string(metav1.ConditionFalse)
+			upgradeTargets = append(upgradeTargets, upgradeTarget{
+				manifestWorkNamespace: mw.Namespace,
+				manifestWorkName:      mw.Name,
+				helmReleaseNamespace:  hr.Namespace,
+				helmReleaseName:       hr.Name,
+			})
 
 			_, err := cu.CreateOrPatch(context.Background(), kc, &mw, func(obj client.Object, createOp bool) client.Object {
 				in := obj.(*workv1.ManifestWork)
@@ -243,7 +266,13 @@ func UpgradeCluster(profileBinding *profilev1alpha1.ManagedClusterProfileBinding
 			}
 
 			mwList.Items[i].Spec.Workload.Manifests[j] = manifest
-			configMap.Data[hr.Name] = string(metav1.ConditionTrue)
+			configMap.Data[hr.Name] = string(metav1.ConditionFalse)
+			upgradeTargets = append(upgradeTargets, upgradeTarget{
+				manifestWorkNamespace: mwList.Items[i].Namespace,
+				manifestWorkName:      mwList.Items[i].Name,
+				helmReleaseNamespace:  hr.Namespace,
+				helmReleaseName:       hr.Name,
+			})
 		}
 		_, err := cu.CreateOrPatch(context.Background(), kc, &mwList.Items[i], func(obj client.Object, createOp bool) client.Object {
 			in := obj.(*workv1.ManifestWork)
@@ -263,6 +292,13 @@ func UpgradeCluster(profileBinding *profilev1alpha1.ManagedClusterProfileBinding
 			return err
 		}
 	}
+
+	time.Sleep(manifestWorkFeedbackWait)
+
+	if err := waitForHelmReleasesReady(kc, upgradeTargets, configMap, helmReleaseReadyPollInterval, helmReleaseReadyTimeout); err != nil {
+		return err
+	}
+
 	configMap.Data["status"] = "completed"
 	_, err = cu.CreateOrPatch(context.Background(), kc, configMap, func(obj client.Object, createOp bool) client.Object {
 		in := obj.(*corev1.ConfigMap)

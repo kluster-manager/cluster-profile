@@ -36,10 +36,13 @@ import (
 	workv1 "open-cluster-management.io/api/work/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
+
+const maxConcurrentReconciles = 3
 
 // ManagedClusterProfileBindingReconciler reconciles a ManagedClusterProfileBinding object
 type ManagedClusterProfileBindingReconciler struct {
@@ -225,5 +228,6 @@ func (r *ManagedClusterProfileBindingReconciler) SetupWithManager(mgr ctrl.Manag
 			&profilev1alpha1.ManagedClusterSetProfile{},
 			handler.EnqueueRequestsFromMapFunc(r.mapClusterProfileToClusterProfileBinding),
 		).
+		WithOptions(controller.Options{MaxConcurrentReconciles: maxConcurrentReconciles}).
 		Complete(r)
 }
