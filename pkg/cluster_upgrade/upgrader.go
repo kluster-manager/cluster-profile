@@ -20,6 +20,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
+	"time"
 
 	profilev1alpha1 "github.com/kluster-manager/cluster-profile/apis/profile/v1alpha1"
 	"github.com/kluster-manager/cluster-profile/pkg/feature_installer"
@@ -42,13 +44,46 @@ import (
 	releasesapi "x-helm.dev/apimachinery/apis/releases/v1alpha1"
 )
 
-func UpgradeCluster(profileBinding *profilev1alpha1.ManagedClusterProfileBinding, profile *profilev1alpha1.ManagedClusterSetProfile, kc client.Client) error {
-	logger := klog.FromContext(context.Background())
+const (
+	helmReleaseReadyPollInterval = 6 * time.Second
+	helmReleaseReadyTimeout      = 30 * time.Minute
+)
+
+type upgradeTarget struct {
+	manifestWorkNamespace string
+	manifestWorkName      string
+	helmReleaseNamespace  string
+	helmReleaseName       string
+	// minGeneration is the spoke-side HelmRelease generation that proves the spec
+	// this upgrade wrote has reached the cluster.
+	minGeneration int64
+}
+
+// newUpgradeTarget derives the generation that marks oldObject as replaced by
+// newObject. A rewrite that changes nothing does not bump the generation on the
+// spoke, so waiting for a higher one would hang until the timeout.
+func newUpgradeTarget(mw *workv1.ManifestWork, hr *fluxhelm.HelmRelease, oldObject, newObject map[string]any) upgradeTarget {
+	minGeneration := helmReleaseGeneration(mw, hr.Namespace, hr.Name)
+	if !reflect.DeepEqual(oldObject, newObject) {
+		minGeneration++
+	}
+
+	return upgradeTarget{
+		manifestWorkNamespace: mw.Namespace,
+		manifestWorkName:      mw.Name,
+		helmReleaseNamespace:  hr.Namespace,
+		helmReleaseName:       hr.Name,
+		minGeneration:         minGeneration,
+	}
+}
+
+func UpgradeCluster(ctx context.Context, profileBinding *profilev1alpha1.ManagedClusterProfileBinding, profile *profilev1alpha1.ManagedClusterSetProfile, kc client.Client) error {
+	logger := klog.FromContext(ctx)
 	logger.Info(fmt.Sprintf("Upgrading Cluster: %s", profileBinding.Namespace))
 
 	var fakeServer *feature_installer.FakeServer
 	var err error
-	if fakeServer, err = feature_installer.StartFakeApiServerAndApplyBaseManifestWorkReplicaSets(context.Background(), kc, profileBinding); err != nil {
+	if fakeServer, err = feature_installer.StartFakeApiServerAndApplyBaseManifestWorkReplicaSets(ctx, kc, profileBinding); err != nil {
 		return err
 	}
 
@@ -88,14 +123,16 @@ func UpgradeCluster(profileBinding *profilev1alpha1.ManagedClusterProfileBinding
 	mergedValues := values.MergeMaps(defaultValues, overrideValues)
 
 	var mw workv1.ManifestWork
-	if err := kc.Get(context.Background(), types.NamespacedName{Name: "opscenter-core", Namespace: profileBinding.GetNamespace()}, &mw); err != nil {
+	if err := kc.Get(ctx, types.NamespacedName{Name: "opscenter-core", Namespace: profileBinding.GetNamespace()}, &mw); err != nil {
 		return err
 	}
 
-	configMap, err := createConfigMapInSpokeClusterNamespace(kc, profileBinding.Spec.OpscenterFeaturesVersion, profileBinding.Namespace)
+	configMap, err := createConfigMapInSpokeClusterNamespace(ctx, kc, profileBinding.Spec.OpscenterFeaturesVersion, profileBinding.Namespace)
 	if err != nil {
 		return err
 	}
+
+	var upgradeTargets []upgradeTarget
 
 	for i, m := range mw.Spec.Workload.Manifests {
 		object := map[string]any{}
@@ -133,10 +170,17 @@ func UpgradeCluster(profileBinding *profilev1alpha1.ManagedClusterProfileBinding
 				return err
 			}
 
-			mw.Spec.Workload.Manifests[i] = manifest
-			configMap.Data[hr.Name] = string(metav1.ConditionTrue)
+			newObject := map[string]any{}
+			if err = utils.Copy(manifest, &newObject); err != nil {
+				return err
+			}
 
-			_, err := cu.CreateOrPatch(context.Background(), kc, &mw, func(obj client.Object, createOp bool) client.Object {
+			mw.Spec.Workload.Manifests[i] = manifest
+			configMap.Data[hr.Name] = string(metav1.ConditionFalse)
+			upgradeTargets = append(upgradeTargets, newUpgradeTarget(&mw, &hr, object, newObject))
+			ensureHelmReleaseFeedbackRules(&mw, hr.Namespace, hr.Name)
+
+			_, err := cu.CreateOrPatch(ctx, kc, &mw, func(obj client.Object, createOp bool) client.Object {
 				in := obj.(*workv1.ManifestWork)
 				in.Spec = mw.Spec
 				return in
@@ -145,7 +189,7 @@ func UpgradeCluster(profileBinding *profilev1alpha1.ManagedClusterProfileBinding
 				return err
 			}
 
-			_, err = cu.CreateOrPatch(context.Background(), kc, configMap, func(obj client.Object, createOp bool) client.Object {
+			_, err = cu.CreateOrPatch(ctx, kc, configMap, func(obj client.Object, createOp bool) client.Object {
 				in := obj.(*corev1.ConfigMap)
 				in.Data = configMap.Data
 				return in
@@ -158,7 +202,7 @@ func UpgradeCluster(profileBinding *profilev1alpha1.ManagedClusterProfileBinding
 	}
 
 	var mwList workv1.ManifestWorkList
-	if err := kc.List(context.Background(), &mwList, client.InNamespace(profileBinding.Namespace)); err != nil {
+	if err := kc.List(ctx, &mwList, client.InNamespace(profileBinding.Namespace)); err != nil {
 		return err
 	}
 
@@ -213,7 +257,7 @@ func UpgradeCluster(profileBinding *profilev1alpha1.ManagedClusterProfileBinding
 			}
 
 			var feature uiapi.Feature
-			if err := fakeServer.FakeClient.Get(context.Background(), types.NamespacedName{Name: hr.Name}, &feature); err != nil {
+			if err := fakeServer.FakeClient.Get(ctx, types.NamespacedName{Name: hr.Name}, &feature); err != nil {
 				return err
 			}
 			var featureValues map[string]any
@@ -242,10 +286,17 @@ func UpgradeCluster(profileBinding *profilev1alpha1.ManagedClusterProfileBinding
 				return err
 			}
 
+			newObject := map[string]any{}
+			if err = utils.Copy(manifest, &newObject); err != nil {
+				return err
+			}
+
 			mwList.Items[i].Spec.Workload.Manifests[j] = manifest
-			configMap.Data[hr.Name] = string(metav1.ConditionTrue)
+			configMap.Data[hr.Name] = string(metav1.ConditionFalse)
+			upgradeTargets = append(upgradeTargets, newUpgradeTarget(&mwList.Items[i], &hr, object, newObject))
+			ensureHelmReleaseFeedbackRules(&mwList.Items[i], hr.Namespace, hr.Name)
 		}
-		_, err := cu.CreateOrPatch(context.Background(), kc, &mwList.Items[i], func(obj client.Object, createOp bool) client.Object {
+		_, err := cu.CreateOrPatch(ctx, kc, &mwList.Items[i], func(obj client.Object, createOp bool) client.Object {
 			in := obj.(*workv1.ManifestWork)
 			in.Spec = mwList.Items[i].Spec
 			return in
@@ -254,7 +305,7 @@ func UpgradeCluster(profileBinding *profilev1alpha1.ManagedClusterProfileBinding
 			return err
 		}
 
-		_, err = cu.CreateOrPatch(context.Background(), kc, configMap, func(obj client.Object, createOp bool) client.Object {
+		_, err = cu.CreateOrPatch(ctx, kc, configMap, func(obj client.Object, createOp bool) client.Object {
 			in := obj.(*corev1.ConfigMap)
 			in.Data = configMap.Data
 			return in
@@ -263,15 +314,16 @@ func UpgradeCluster(profileBinding *profilev1alpha1.ManagedClusterProfileBinding
 			return err
 		}
 	}
-	configMap.Data["status"] = "completed"
-	_, err = cu.CreateOrPatch(context.Background(), kc, configMap, func(obj client.Object, createOp bool) client.Object {
-		in := obj.(*corev1.ConfigMap)
-		in.Data = configMap.Data
-		return in
-	})
-	if err != nil {
-		return err
+
+	waitErr := waitForHelmReleasesReady(ctx, kc, upgradeTargets, configMap, helmReleaseReadyPollInterval, helmReleaseReadyTimeout)
+	if waitErr != nil && ctx.Err() != nil {
+		// Interrupted, so the upgrade job never finished: leave the ConfigMap pending.
+		return waitErr
 	}
 
-	return nil
+	// "completed" only tells the UI that the upgrade job is done; whether it
+	// succeeded is read from the per-feature values, so it is set even when some
+	// features never became ready.
+	configMap.Data["status"] = "completed"
+	return errors.Join(waitErr, patchConfigMapData(ctx, kc, configMap))
 }

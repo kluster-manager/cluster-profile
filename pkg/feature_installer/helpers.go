@@ -221,12 +221,20 @@ func updateManifestWork(ctx context.Context, fakeServer *FakeServer, kc client.C
 					Type: workv1.JSONPathsType,
 					JsonPaths: []workv1.JsonPath{
 						{
-							Name: "Ready",
+							Name: common.HelmReleaseReadyFeedback,
 							Path: `.status.conditions[?(@.type=="Ready")].status`,
 						},
 						{
 							Name: "Released",
 							Path: `.status.conditions[?(@.type=="Released")].status`,
+						},
+						{
+							Name: common.HelmReleaseGenerationFeedback,
+							Path: ".metadata.generation",
+						},
+						{
+							Name: common.HelmReleaseObservedGenerationFeedback,
+							Path: ".status.observedGeneration",
 						},
 					},
 				},

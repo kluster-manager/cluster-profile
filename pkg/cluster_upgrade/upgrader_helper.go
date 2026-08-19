@@ -19,6 +19,9 @@ package cluster_upgrade
 import (
 	"context"
 	"fmt"
+	"slices"
+	"strings"
+	"time"
 
 	"github.com/kluster-manager/cluster-profile/pkg/common"
 	"github.com/kluster-manager/cluster-profile/pkg/feature_installer"
@@ -26,17 +29,201 @@ import (
 
 	fluxhelm "github.com/fluxcd/helm-controller/api/v2"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/json"
 	"k8s.io/apimachinery/pkg/util/rand"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/klog/v2"
 	kmapi "kmodules.xyz/client-go/api/v1"
+	cu "kmodules.xyz/client-go/client"
 	"kmodules.xyz/resource-metadata/hub"
 	workv1 "open-cluster-management.io/api/work/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	releasesapi "x-helm.dev/apimachinery/apis/releases/v1alpha1"
 )
 
-func createConfigMapInSpokeClusterNamespace(kc client.Client, ver, clusterName string) (*corev1.ConfigMap, error) {
+func helmReleaseFeedback(mw *workv1.ManifestWork, hrNamespace, hrName string) ([]workv1.FeedbackValue, bool) {
+	for _, mc := range mw.Status.ResourceStatus.Manifests {
+		if mc.ResourceMeta.Kind != fluxhelm.HelmReleaseKind || mc.ResourceMeta.Name != hrName || mc.ResourceMeta.Namespace != hrNamespace {
+			continue
+		}
+		return mc.StatusFeedbacks.Values, meta.IsStatusConditionTrue(mc.Conditions, workv1.ManifestApplied)
+	}
+	return nil, false
+}
+
+func feedbackInt(values []workv1.FeedbackValue, name string) (int64, bool) {
+	for _, v := range values {
+		if v.Name == name && v.Value.Integer != nil {
+			return *v.Value.Integer, true
+		}
+	}
+	return 0, false
+}
+
+func feedbackString(values []workv1.FeedbackValue, name string) (string, bool) {
+	for _, v := range values {
+		if v.Name == name && v.Value.String != nil {
+			return *v.Value.String, true
+		}
+	}
+	return "", false
+}
+
+// helmReleaseGeneration reports the spoke-side generation of the HelmRelease as
+// last synced back by the work agent, or 0 if it was never synced.
+func helmReleaseGeneration(mw *workv1.ManifestWork, hrNamespace, hrName string) int64 {
+	values, _ := helmReleaseFeedback(mw, hrNamespace, hrName)
+	generation, _ := feedbackInt(values, common.HelmReleaseGenerationFeedback)
+	return generation
+}
+
+// helmReleaseReady reports whether mw's status shows target's HelmRelease as
+// applied and Ready *for the spec this upgrade wrote*. Feedback values lag the
+// spec patch and flux keeps Ready=True until it notices the new spec, so a Ready
+// feedback alone can still describe the pre-upgrade release. The generation
+// feedback pins it down: it must have reached target.minGeneration (proving the
+// object is the one we wrote) and flux must have observed it (proving flux is
+// done with it, not about to start).
+func helmReleaseReady(mw *workv1.ManifestWork, target upgradeTarget) bool {
+	values, applied := helmReleaseFeedback(mw, target.helmReleaseNamespace, target.helmReleaseName)
+	if !applied {
+		return false
+	}
+
+	if ready, ok := feedbackString(values, common.HelmReleaseReadyFeedback); !ok || ready != string(metav1.ConditionTrue) {
+		return false
+	}
+
+	generation, ok := feedbackInt(values, common.HelmReleaseGenerationFeedback)
+	if !ok || generation < target.minGeneration {
+		return false
+	}
+
+	observedGeneration, ok := feedbackInt(values, common.HelmReleaseObservedGenerationFeedback)
+	return ok && observedGeneration == generation
+}
+
+// ensureHelmReleaseFeedbackRules makes mw report back everything helmReleaseReady
+// needs for the given HelmRelease. The upgrade path never goes through
+// updateManifestWork, so a ManifestWork installed by an older build carries only
+// the rules it was created with.
+func ensureHelmReleaseFeedbackRules(mw *workv1.ManifestWork, hrNamespace, hrName string) {
+	rules := []workv1.FeedbackRule{
+		{
+			Type: workv1.JSONPathsType,
+			JsonPaths: []workv1.JsonPath{
+				{
+					Name: common.HelmReleaseReadyFeedback,
+					Path: `.status.conditions[?(@.type=="Ready")].status`,
+				},
+				{
+					Name: "Released",
+					Path: `.status.conditions[?(@.type=="Released")].status`,
+				},
+				{
+					Name: common.HelmReleaseGenerationFeedback,
+					Path: ".metadata.generation",
+				},
+				{
+					Name: common.HelmReleaseObservedGenerationFeedback,
+					Path: ".status.observedGeneration",
+				},
+			},
+		},
+	}
+
+	for i, config := range mw.Spec.ManifestConfigs {
+		if config.ResourceIdentifier.Resource == "helmreleases" &&
+			config.ResourceIdentifier.Name == hrName &&
+			config.ResourceIdentifier.Namespace == hrNamespace {
+			mw.Spec.ManifestConfigs[i].FeedbackRules = rules
+			return
+		}
+	}
+
+	mw.Spec.ManifestConfigs = append(mw.Spec.ManifestConfigs, workv1.ManifestConfigOption{
+		ResourceIdentifier: workv1.ResourceIdentifier{
+			Group:     fluxhelm.GroupVersion.Group,
+			Resource:  "helmreleases",
+			Name:      hrName,
+			Namespace: hrNamespace,
+		},
+		FeedbackRules: rules,
+	})
+}
+
+// waitForHelmReleasesReady marks each target ready in configMap as it becomes
+// ready, until none are left or timeout elapses. A timeout is an error: the
+// targets left "false" never became ready, so the upgrade did not succeed.
+func waitForHelmReleasesReady(ctx context.Context, kc client.Client, targets []upgradeTarget, configMap *corev1.ConfigMap, interval, timeout time.Duration) error {
+	pending := slices.Clone(targets)
+
+	err := wait.PollUntilContextTimeout(ctx, interval, timeout, true, func(ctx context.Context) (bool, error) {
+		logger := klog.FromContext(ctx)
+		notReady := make([]upgradeTarget, 0, len(pending))
+		becameReady := false
+
+		for _, target := range pending {
+			var mw workv1.ManifestWork
+			if err := kc.Get(ctx, types.NamespacedName{Name: target.manifestWorkName, Namespace: target.manifestWorkNamespace}, &mw); err != nil {
+				// The upgrade is already in flight on the spoke; a read error must not
+				// abort it, so keep the target pending and retry on the next tick.
+				logger.Error(err, "failed to read ManifestWork while waiting for HelmRelease", "manifestWork", klog.KRef(target.manifestWorkNamespace, target.manifestWorkName))
+				notReady = append(notReady, target)
+				continue
+			}
+
+			if helmReleaseReady(&mw, target) {
+				configMap.Data[target.helmReleaseName] = string(metav1.ConditionTrue)
+				becameReady = true
+			} else {
+				notReady = append(notReady, target)
+			}
+		}
+
+		if becameReady {
+			if err := patchConfigMapData(ctx, kc, configMap); err != nil {
+				// pending is left untouched so the marks are re-applied next tick.
+				logger.Error(err, "failed to mark HelmRelease(s) ready in upgrader ConfigMap", "configMap", klog.KObj(configMap))
+				return false, nil
+			}
+		}
+
+		pending = notReady
+
+		return len(pending) == 0, nil
+	})
+	if err != nil {
+		names := make([]string, 0, len(pending))
+		for _, target := range pending {
+			names = append(names, fmt.Sprintf("%s/%s", target.helmReleaseNamespace, target.helmReleaseName))
+		}
+		// wait.Interrupted is also true for a cancelled parent context, so ask the
+		// parent whether this was a shutdown rather than a real timeout.
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			return fmt.Errorf("interrupted while waiting for HelmRelease(s) %s: %w", strings.Join(names, ", "), ctxErr)
+		}
+		if wait.Interrupted(err) {
+			return fmt.Errorf("timed out after %s waiting for HelmRelease(s) to become ready: %s", timeout, strings.Join(names, ", "))
+		}
+		return err
+	}
+	return nil
+}
+
+func patchConfigMapData(ctx context.Context, kc client.Client, configMap *corev1.ConfigMap) error {
+	_, err := cu.CreateOrPatch(ctx, kc, configMap, func(obj client.Object, createOp bool) client.Object {
+		in := obj.(*corev1.ConfigMap)
+		in.Data = configMap.Data
+		return in
+	})
+	return err
+}
+
+func createConfigMapInSpokeClusterNamespace(ctx context.Context, kc client.Client, ver, clusterName string) (*corev1.ConfigMap, error) {
 	var err error
 	cmData := make(map[string]string)
 	cmData["opscenter-features"] = string(metav1.ConditionFalse)
@@ -44,7 +231,7 @@ func createConfigMapInSpokeClusterNamespace(kc client.Client, ver, clusterName s
 	cmData["status"] = "pending"
 
 	var mwList workv1.ManifestWorkList
-	if err := kc.List(context.Background(), &mwList, client.InNamespace(clusterName)); err != nil {
+	if err := kc.List(ctx, &mwList, client.InNamespace(clusterName)); err != nil {
 		return nil, err
 	}
 	for _, mw := range mwList.Items {
@@ -93,7 +280,7 @@ func createConfigMapInSpokeClusterNamespace(kc client.Client, ver, clusterName s
 		Data: cmData,
 	}
 
-	if err = kc.Create(context.Background(), &cm); err != nil {
+	if err = kc.Create(ctx, &cm); err != nil {
 		return nil, err
 	}
 	return &cm, nil
