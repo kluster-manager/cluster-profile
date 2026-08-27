@@ -24,6 +24,14 @@ const (
 	ACEUpgraderVersion = "ace.cloud.com/version"
 	UpgradeAnnotation  = "ace.cloud.com/upgradeAt"
 
+	// UpgradeTargetsAnnotation carries the HelmReleases an in-flight upgrade is
+	// waiting on, so a later reconcile can resume the wait instead of re-applying.
+	UpgradeTargetsAnnotation = "profile.k8s.appscode.com/upgrade-targets"
+
+	UpgradeStatusKey       = "status"
+	UpgradeStatusPending   = "pending"
+	UpgradeStatusCompleted = "completed"
+
 	HelmReleaseReadyFeedback              = "Ready"
 	HelmReleaseGenerationFeedback         = "Generation"
 	HelmReleaseObservedGenerationFeedback = "ObservedGeneration"
