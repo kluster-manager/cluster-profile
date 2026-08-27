@@ -63,12 +63,37 @@ type upgradeTarget struct {
 	MinGeneration int64 `json:"minGeneration"`
 }
 
-// newUpgradeTarget derives the generation that marks oldObject as replaced by
-// newObject. A rewrite that changes nothing does not bump the generation on the
-// spoke, so waiting for a higher one would hang until the timeout.
-func newUpgradeTarget(mw *workv1.ManifestWork, hr *fluxhelm.HelmRelease, oldObject, newObject map[string]any) upgradeTarget {
+// specChanged reports whether the HelmRelease spec this upgrade writes differs
+// from the one oldManifest already carries. Only the spec is compared: a typed
+// round trip also rewrites hub-side noise (an empty `status`, say) that the work
+// agent never propagates, so a whole-manifest comparison reports a change the
+// spoke will not act on.
+func specChanged(oldManifest workv1.Manifest, newSpec fluxhelm.HelmReleaseSpec) (bool, error) {
+	var oldHR fluxhelm.HelmRelease
+	if err := utils.Copy(oldManifest, &oldHR); err != nil {
+		return false, err
+	}
+
+	// Through maps rather than the structs: spec.values is raw JSON, so equal
+	// values can still differ byte for byte.
+	oldMap, newMap := map[string]any{}, map[string]any{}
+	if err := utils.Copy(oldHR.Spec, &oldMap); err != nil {
+		return false, err
+	}
+	if err := utils.Copy(newSpec, &newMap); err != nil {
+		return false, err
+	}
+
+	return !reflect.DeepEqual(oldMap, newMap), nil
+}
+
+// newUpgradeTarget derives the generation that marks the HelmRelease as carrying
+// the spec this upgrade wrote. A rewrite that changes nothing does not bump the
+// generation on the spoke, so waiting for a higher one would hang until the
+// timeout.
+func newUpgradeTarget(mw *workv1.ManifestWork, hr *fluxhelm.HelmRelease, changed bool) upgradeTarget {
 	minGeneration := helmReleaseGeneration(mw, hr.Namespace, hr.Name)
-	if !reflect.DeepEqual(oldObject, newObject) {
+	if changed {
 		minGeneration++
 	}
 
@@ -207,22 +232,22 @@ func applyUpgrade(ctx context.Context, kc client.Client, profileBinding *profile
 				hr.Spec.Values = &apiextensionsJSON
 			}
 
+			changed, err := specChanged(m, hr.Spec)
+			if err != nil {
+				return ctrl.Result{}, err
+			}
+
 			manifest := workv1.Manifest{}
 			if err = utils.Copy(hr, &manifest); err != nil {
 				return ctrl.Result{}, err
 			}
 
-			newObject := map[string]any{}
-			if err = utils.Copy(manifest, &newObject); err != nil {
-				return ctrl.Result{}, err
-			}
-
 			mw.Spec.Workload.Manifests[i] = manifest
 			configMap.Data[hr.Name] = string(metav1.ConditionFalse)
-			upgradeTargets = append(upgradeTargets, newUpgradeTarget(&mw, &hr, object, newObject))
+			upgradeTargets = append(upgradeTargets, newUpgradeTarget(&mw, &hr, changed))
 			ensureHelmReleaseFeedbackRules(&mw, hr.Namespace, hr.Name)
 
-			_, err := cu.CreateOrPatch(ctx, kc, &mw, func(obj client.Object, createOp bool) client.Object {
+			_, err = cu.CreateOrPatch(ctx, kc, &mw, func(obj client.Object, createOp bool) client.Object {
 				in := obj.(*workv1.ManifestWork)
 				in.Spec = mw.Spec
 				return in
@@ -337,19 +362,19 @@ func applyUpgrade(ctx context.Context, kc client.Client, profileBinding *profile
 			if hr.Spec.Install != nil {
 				hr.Spec.Install.CreateNamespace = feature.Spec.Chart.CreateNamespace
 			}
+			changed, err := specChanged(m, hr.Spec)
+			if err != nil {
+				return ctrl.Result{}, err
+			}
+
 			manifest := workv1.Manifest{}
 			if err = utils.Copy(hr, &manifest); err != nil {
 				return ctrl.Result{}, err
 			}
 
-			newObject := map[string]any{}
-			if err = utils.Copy(manifest, &newObject); err != nil {
-				return ctrl.Result{}, err
-			}
-
 			mwList.Items[i].Spec.Workload.Manifests[j] = manifest
 			configMap.Data[hr.Name] = string(metav1.ConditionFalse)
-			upgradeTargets = append(upgradeTargets, newUpgradeTarget(&mwList.Items[i], &hr, object, newObject))
+			upgradeTargets = append(upgradeTargets, newUpgradeTarget(&mwList.Items[i], &hr, changed))
 			ensureHelmReleaseFeedbackRules(&mwList.Items[i], hr.Namespace, hr.Name)
 		}
 		_, err := cu.CreateOrPatch(ctx, kc, &mwList.Items[i], func(obj client.Object, createOp bool) client.Object {
