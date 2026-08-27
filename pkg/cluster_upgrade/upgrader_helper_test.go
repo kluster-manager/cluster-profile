@@ -56,7 +56,7 @@ func (c *stubClient) Scheme() *runtime.Scheme {
 	if err := corev1.AddToScheme(scheme); err != nil {
 		panic(err)
 	}
-	if err := workv1.AddToScheme(scheme); err != nil {
+	if err := workv1.Install(scheme); err != nil {
 		panic(err)
 	}
 	return scheme
@@ -111,6 +111,11 @@ func (c *stubClient) Patch(_ context.Context, obj client.Object, _ client.Patch,
 	return nil
 }
 
+const (
+	hrNamespace    = "kubeops"
+	testGeneration = 2
+)
+
 func stringValue(name, value string) workv1.FeedbackValue {
 	return workv1.FeedbackValue{Name: name, Value: workv1.FieldValue{Type: workv1.String, String: &value}}
 }
@@ -121,7 +126,7 @@ func intValue(name string, value int64) workv1.FeedbackValue {
 
 // manifestWork builds a ManifestWork whose status reports hrNamespace/hrName with
 // the given feedback. applied controls the Applied condition the work agent sets.
-func manifestWork(name, hrNamespace, hrName string, applied bool, values ...workv1.FeedbackValue) *workv1.ManifestWork {
+func manifestWork(name, hrName string, applied bool, values ...workv1.FeedbackValue) *workv1.ManifestWork {
 	status := metav1.ConditionFalse
 	if applied {
 		status = metav1.ConditionTrue
@@ -142,11 +147,11 @@ func manifestWork(name, hrNamespace, hrName string, applied bool, values ...work
 	}
 }
 
-func readyFeedback(generation int64) []workv1.FeedbackValue {
+func readyFeedback() []workv1.FeedbackValue {
 	return []workv1.FeedbackValue{
 		stringValue(common.HelmReleaseReadyFeedback, string(metav1.ConditionTrue)),
-		intValue(common.HelmReleaseGenerationFeedback, generation),
-		intValue(common.HelmReleaseObservedGenerationFeedback, generation),
+		intValue(common.HelmReleaseGenerationFeedback, testGeneration),
+		intValue(common.HelmReleaseObservedGenerationFeedback, testGeneration),
 	}
 }
 
@@ -154,7 +159,7 @@ func target(mwName, hrName string, minGeneration int64) upgradeTarget {
 	return upgradeTarget{
 		ManifestWorkNamespace: "spoke",
 		ManifestWorkName:      mwName,
-		HelmReleaseNamespace:  "kubeops",
+		HelmReleaseNamespace:  hrNamespace,
 		HelmReleaseName:       hrName,
 		MinGeneration:         minGeneration,
 	}
@@ -190,7 +195,7 @@ func TestEvaluateTargets(t *testing.T) {
 		{
 			name:        "ready target is marked and drops out",
 			targets:     []upgradeTarget{target("observability", "prom-label-proxy", 2)},
-			works:       map[string]*workv1.ManifestWork{"spoke/observability": manifestWork("observability", "kubeops", "prom-label-proxy", true, readyFeedback(2)...)},
+			works:       map[string]*workv1.ManifestWork{"spoke/observability": manifestWork("observability", "prom-label-proxy", true, readyFeedback()...)},
 			data:        map[string]string{"prom-label-proxy": string(metav1.ConditionFalse)},
 			wantMarked:  map[string]string{"prom-label-proxy": string(metav1.ConditionTrue)},
 			wantPatches: 1,
@@ -198,7 +203,7 @@ func TestEvaluateTargets(t *testing.T) {
 		{
 			name:        "flux has not observed the new spec yet",
 			targets:     []upgradeTarget{target("observability", "tenant-operator", 2)},
-			works:       map[string]*workv1.ManifestWork{"spoke/observability": manifestWork("observability", "kubeops", "tenant-operator", true, staleObserved...)},
+			works:       map[string]*workv1.ManifestWork{"spoke/observability": manifestWork("observability", "tenant-operator", true, staleObserved...)},
 			data:        map[string]string{"tenant-operator": string(metav1.ConditionFalse)},
 			wantPending: []string{"tenant-operator"},
 			wantPatches: 0,
@@ -206,7 +211,7 @@ func TestEvaluateTargets(t *testing.T) {
 		{
 			name:        "not applied on the spoke",
 			targets:     []upgradeTarget{target("observability", "tenant-operator", 2)},
-			works:       map[string]*workv1.ManifestWork{"spoke/observability": manifestWork("observability", "kubeops", "tenant-operator", false, readyFeedback(2)...)},
+			works:       map[string]*workv1.ManifestWork{"spoke/observability": manifestWork("observability", "tenant-operator", false, readyFeedback()...)},
 			data:        map[string]string{"tenant-operator": string(metav1.ConditionFalse)},
 			wantPending: []string{"tenant-operator"},
 			wantPatches: 0,
@@ -214,7 +219,7 @@ func TestEvaluateTargets(t *testing.T) {
 		{
 			name:        "already marked ready is not patched again",
 			targets:     []upgradeTarget{target("observability", "prom-label-proxy", 2)},
-			works:       map[string]*workv1.ManifestWork{"spoke/observability": manifestWork("observability", "kubeops", "prom-label-proxy", true, readyFeedback(2)...)},
+			works:       map[string]*workv1.ManifestWork{"spoke/observability": manifestWork("observability", "prom-label-proxy", true, readyFeedback()...)},
 			data:        map[string]string{"prom-label-proxy": string(metav1.ConditionTrue)},
 			wantPatches: 0,
 		},
@@ -233,8 +238,8 @@ func TestEvaluateTargets(t *testing.T) {
 				target("core", "kube-ui-server", 3),
 			},
 			works: map[string]*workv1.ManifestWork{
-				"spoke/observability": manifestWork("observability", "kubeops", "prom-label-proxy", true, readyFeedback(2)...),
-				"spoke/core":          manifestWork("core", "kubeops", "kube-ui-server", true, readyFeedback(2)...),
+				"spoke/observability": manifestWork("observability", "prom-label-proxy", true, readyFeedback()...),
+				"spoke/core":          manifestWork("core", "kube-ui-server", true, readyFeedback()...),
 			},
 			data:        map[string]string{"prom-label-proxy": string(metav1.ConditionFalse), "kube-ui-server": string(metav1.ConditionFalse)},
 			wantPending: []string{"kube-ui-server"},
@@ -294,7 +299,7 @@ func TestEvaluateTargetsPatchFailureIsReported(t *testing.T) {
 	configMap := upgraderConfigMap(map[string]string{"prom-label-proxy": string(metav1.ConditionFalse)})
 	kc := &stubClient{
 		manifestWorks: map[string]*workv1.ManifestWork{
-			"spoke/observability": manifestWork("observability", "kubeops", "prom-label-proxy", true, readyFeedback(2)...),
+			"spoke/observability": manifestWork("observability", "prom-label-proxy", true, readyFeedback()...),
 		},
 		configMaps: []corev1.ConfigMap{*configMap},
 		patchErr:   errors.New("conflict"),
@@ -445,11 +450,6 @@ func TestFindPendingUpgradeScopesTheListToTheBinding(t *testing.T) {
 		t.Errorf("label selector = %v, want it to select upgrader ConfigMaps", options.LabelSelector)
 	}
 }
-
-type labelSet map[string]string
-
-func (l labelSet) Has(key string) bool   { _, found := l[key]; return found }
-func (l labelSet) Get(key string) string { return l[key] }
 
 func TestFindPendingUpgradeSurfacesErrors(t *testing.T) {
 	t.Run("list error", func(t *testing.T) {
