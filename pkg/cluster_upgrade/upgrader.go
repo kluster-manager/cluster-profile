@@ -63,6 +63,28 @@ type upgradeTarget struct {
 	MinGeneration int64 `json:"minGeneration"`
 }
 
+// pruneNulls drops null-valued keys, mirroring what a JSON merge patch does to
+// the document it carries. Without it a null in spec.values makes every
+// comparison against the stored manifest report a change that can never be
+// written away.
+func pruneNulls(value any) any {
+	switch typed := value.(type) {
+	case map[string]any:
+		for key, child := range typed {
+			if child == nil {
+				delete(typed, key)
+				continue
+			}
+			typed[key] = pruneNulls(child)
+		}
+	case []any:
+		for i, child := range typed {
+			typed[i] = pruneNulls(child)
+		}
+	}
+	return value
+}
+
 // specChanged reports whether the HelmRelease spec this upgrade writes differs
 // from the one oldManifest already carries. Only the spec is compared: a typed
 // round trip also rewrites hub-side noise (an empty `status`, say) that the work
@@ -84,7 +106,7 @@ func specChanged(oldManifest workv1.Manifest, newSpec fluxhelm.HelmReleaseSpec) 
 		return false, err
 	}
 
-	return !reflect.DeepEqual(oldMap, newMap), nil
+	return !reflect.DeepEqual(pruneNulls(oldMap), pruneNulls(newMap)), nil
 }
 
 // newUpgradeTarget derives the generation that marks the HelmRelease as carrying
