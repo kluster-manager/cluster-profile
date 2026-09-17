@@ -103,8 +103,15 @@ func (r *ManagedClusterProfileBindingReconciler) Reconcile(ctx context.Context, 
 	}
 	if r.needsUpgrade(profileBinding) {
 		logger.Info("Triggering cluster upgrade")
-		if err := cluster_upgrade.UpgradeCluster(ctx, profileBinding, profile, r.Client); err != nil {
+		result, err := cluster_upgrade.UpgradeCluster(ctx, profileBinding, profile, r.Client)
+		if err != nil {
 			return reconcile.Result{}, r.setOpscenterFeaturesVersion(ctx, profileBinding, upgradeTime, err)
+		}
+		if !result.IsZero() {
+			// The upgrade is still converging on the spoke. Advancing the observed
+			// version here would make needsUpgrade() false and strand it, so leave
+			// the status alone and come back for the next observation.
+			return result, nil
 		}
 	} else if r.shouldEnableFeatures(profileBinding, profile) {
 		logger.Info("Enabling features")
