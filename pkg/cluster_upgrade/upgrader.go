@@ -349,13 +349,6 @@ func applyUpgrade(ctx context.Context, kc client.Client, profileBinding *profile
 			if err := fakeServer.FakeClient.Get(ctx, types.NamespacedName{Name: hr.Name}, &feature); err != nil {
 				return ctrl.Result{}, err
 			}
-			// Same precedence as the non-upgrade path (GetFeatureSetValues): an
-			// explicit chart in the profile wins over the one the opscenter-features
-			// chart ships, so a profile edit is how an operator pins or relocates a
-			// feature during an upgrade too.
-			if featureSpec, found := profile.Spec.Features[feature.Name]; found && featureSpec.Chart.Name != "" {
-				feature.Spec.Chart = featureSpec.Chart
-			}
 			var featureValues map[string]any
 			if feature.Spec.Values != nil {
 				if err := json.Unmarshal(feature.Spec.Values.Raw, &featureValues); err != nil {
