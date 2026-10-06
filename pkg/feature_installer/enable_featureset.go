@@ -64,6 +64,11 @@ import (
 	releasesapi "x-helm.dev/apimachinery/apis/releases/v1alpha1"
 )
 
+const (
+	akpCrdManagerFeatureName = "akp-crd-manager"
+	kubeUIServerFeatureName  = "kube-ui-server"
+)
+
 type featureStatus struct {
 	enabled bool
 	managed bool
@@ -195,7 +200,11 @@ func enableFeatureSet(ctx context.Context, kc client.Client, fakeServer *FakeSer
 			mergedValues = values.MergeMaps(defaultValues, overrideValues)
 		}
 
-		if err = CreateHelmRelease("opscenter-features", "opscenter-core", hub.BootstrapHelmRepositoryNamespace(), profile, featureObj, fakeServer, mergedValues); err != nil {
+		var dependsOn []string
+		if slices.Contains(features, akpCrdManagerFeatureName) {
+			dependsOn = append(dependsOn, akpCrdManagerFeatureName)
+		}
+		if err = CreateHelmRelease("opscenter-features", "opscenter-core", hub.BootstrapHelmRepositoryNamespace(), profile, featureObj, fakeServer, mergedValues, dependsOn...); err != nil {
 			return err
 		}
 
@@ -598,6 +607,10 @@ func updateHelmReleaseDependency(ctx context.Context, kc client.Client, values m
 	}
 
 	featureKey := getFeaturePathInValues(feature.Name)
+	// Mirrors ace-installer on the hub: kube-ui-server waits for opscenter-features, which itself waits for akp-crd-manager.
+	if feature.Name == kubeUIServerFeatureName {
+		return unstructured.SetNestedSlice(values, []any{map[string]any{"name": hub.ChartOpscenterFeatures}}, "resources", featureKey, "spec", "dependsOn")
+	}
 	if len(feature.Spec.Requirements.Features) > 0 {
 		dependsOn := make([]kmapi.ObjectReference, 0, len(feature.Spec.Requirements.Features))
 		for _, featureName := range feature.Spec.Requirements.Features {
