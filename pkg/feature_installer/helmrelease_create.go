@@ -33,7 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func CreateHelmRelease(featureName, featureSetName, ns string, profile *profilev1alpha1.ManagedClusterSetProfile, featureObj uiapi.Feature, fakeServer *FakeServer, values map[string]any) error {
+func CreateHelmRelease(featureName, featureSetName, ns string, profile *profilev1alpha1.ManagedClusterSetProfile, featureObj uiapi.Feature, fakeServer *FakeServer, values map[string]any, dependsOn ...string) error {
 	hr := &fluxhelm.HelmRelease{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      featureName,
@@ -75,6 +75,10 @@ func CreateHelmRelease(featureName, featureSetName, ns string, profile *profilev
 			},
 			Values: profile.Spec.Features[featureName].Values,
 		},
+	}
+
+	for _, d := range dependsOn {
+		hr.Spec.DependsOn = append(hr.Spec.DependsOn, fluxhelm.DependencyReference{Name: d})
 	}
 
 	if len(profile.Spec.Features[featureName].ValuesFrom) > 0 {

@@ -64,6 +64,8 @@ import (
 	releasesapi "x-helm.dev/apimachinery/apis/releases/v1alpha1"
 )
 
+const akpCrdManagerFeatureName = "akp-crd-manager"
+
 type featureStatus struct {
 	enabled bool
 	managed bool
@@ -195,7 +197,11 @@ func enableFeatureSet(ctx context.Context, kc client.Client, fakeServer *FakeSer
 			mergedValues = values.MergeMaps(defaultValues, overrideValues)
 		}
 
-		if err = CreateHelmRelease("opscenter-features", "opscenter-core", hub.BootstrapHelmRepositoryNamespace(), profile, featureObj, fakeServer, mergedValues); err != nil {
+		var dependsOn []string
+		if slices.Contains(features, akpCrdManagerFeatureName) {
+			dependsOn = append(dependsOn, akpCrdManagerFeatureName)
+		}
+		if err = CreateHelmRelease("opscenter-features", "opscenter-core", hub.BootstrapHelmRepositoryNamespace(), profile, featureObj, fakeServer, mergedValues, dependsOn...); err != nil {
 			return err
 		}
 
