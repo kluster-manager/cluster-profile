@@ -584,6 +584,23 @@ func generateHelmReleaseForFeature(kc client.Client, fs *uiapi.FeatureSet, featu
 	return updateHelmReleaseDependency(context.Background(), kc, curValues, feature, mc)
 }
 
+func GetFeatureSetChartValues(ctx context.Context, kc client.Client, featureSet string) (map[string]any, error) {
+	var fs uiapi.FeatureSet
+	if err := kc.Get(ctx, client.ObjectKey{Name: featureSet}, &fs); err != nil {
+		return nil, err
+	}
+	chart, err := NewVirtualRegistry(kc).GetChart(fs.Spec.Chart)
+	if err != nil {
+		return nil, err
+	}
+	return chart.Values, nil
+}
+
+func GetFeatureHelmReleaseValues(chartValues map[string]any, feature string) (map[string]any, error) {
+	featureValues, _, err := unstructured.NestedMap(chartValues, "resources", getFeaturePathInValues(feature), "spec", "values")
+	return featureValues, err
+}
+
 func getFeaturePathInValues(feature string) string {
 	return fmt.Sprintf("helmToolkitFluxcdIoHelmRelease_%s", strings.ReplaceAll(feature, "-", "_"))
 }

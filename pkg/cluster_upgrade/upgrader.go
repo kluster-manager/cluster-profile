@@ -31,6 +31,7 @@ import (
 	fluxhelm "github.com/fluxcd/helm-controller/api/v2"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/json"
@@ -300,6 +301,13 @@ func applyUpgrade(ctx context.Context, kc client.Client, profileBinding *profile
 			continue
 		}
 
+		// The target FeatureSet chart ships each feature's base values (e.g. kubedb-ui-presets' database modes),
+		// the same base the non-upgrade path renders from; without it, features with no other values get wiped to {}.
+		chartValues, cvErr := feature_installer.GetFeatureSetChartValues(ctx, fakeServer.FakeClient, mw.Name)
+		if cvErr != nil && !apierrors.IsNotFound(cvErr) {
+			return ctrl.Result{}, cvErr
+		}
+
 		for j, m := range mwList.Items[i].Spec.Workload.Manifests {
 			object := map[string]any{}
 			if err = utils.Copy(m, &object); err != nil {
@@ -356,7 +364,15 @@ func applyUpgrade(ctx context.Context, kc client.Client, profileBinding *profile
 				}
 			}
 
-			finalValues := values.MergeMaps(featureValues, currValues)
+			// Binding values replace everything, matching the non-upgrade path (applyFeatureSet).
+			finalValues := currValues
+			if !skipManagedClusterSetProfileValues {
+				chartDefaults, err := feature_installer.GetFeatureHelmReleaseValues(chartValues, hr.Name)
+				if err != nil {
+					return ctrl.Result{}, err
+				}
+				finalValues = values.MergeMaps(values.MergeMaps(chartDefaults, featureValues), currValues)
+			}
 			if finalValues != nil {
 				jsonData, err := json.Marshal(finalValues)
 				if err != nil {
