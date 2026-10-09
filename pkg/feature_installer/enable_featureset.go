@@ -427,6 +427,11 @@ func GetFeatureSetValues(ctx context.Context, fs *uiapi.FeatureSet, features []s
 		if featureSpec, found := profile.Spec.Features[feature.Name]; found && featureSpec.Chart.Name != "" {
 			feature.Spec.Chart = featureSpec.Chart
 		}
+		// opscenter-features waits on akp-crd-manager but creates appscode-charts-oci, so akp-crd-manager must use the bootstrap repo, like ace-installer on the hub.
+		if feature.Name == akpCrdManagerFeatureName {
+			feature.Spec.Chart.SourceRef.Name = hub.BootstrapHelmRepositoryName()
+			feature.Spec.Chart.SourceRef.Namespace = hub.BootstrapHelmRepositoryNamespace()
+		}
 		status, err := calculateFeatureStatus(ctx, kc, feature)
 		if err != nil {
 			return nil, err
