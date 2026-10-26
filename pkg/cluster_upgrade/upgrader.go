@@ -357,6 +357,11 @@ func applyUpgrade(ctx context.Context, kc client.Client, profileBinding *profile
 			if err := fakeServer.FakeClient.Get(ctx, types.NamespacedName{Name: hr.Name}, &feature); err != nil {
 				return ctrl.Result{}, err
 			}
+			// Keep the profile's namespace like the install path does, but not its version: upgrades must move to the Feature's chart version.
+			if featureSpec, found := profile.Spec.Features[feature.Name]; found && featureSpec.Chart.Name != "" {
+				feature.Spec.Chart.Namespace = featureSpec.Chart.Namespace
+				feature.Spec.Chart.CreateNamespace = featureSpec.Chart.CreateNamespace
+			}
 			var featureValues map[string]any
 			if feature.Spec.Values != nil {
 				if err := json.Unmarshal(feature.Spec.Values.Raw, &featureValues); err != nil {
