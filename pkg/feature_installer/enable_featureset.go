@@ -107,6 +107,10 @@ func EnableFeatures(ctx context.Context, kc client.Client, profileBinding *profi
 		return err
 	}
 
+	if err = addRequiredFeatures(ctx, kc, fakeServer.FakeClient, profileBinding.Namespace, featureInfo); err != nil {
+		return err
+	}
+
 	if err = enableFeatureSet(ctx, kc, fakeServer, "opscenter-core", featureInfo["opscenter-core"], profile, profileBinding, overrideValues); err != nil {
 		return err
 	}
@@ -133,6 +137,64 @@ func EnableFeatures(ctx context.Context, kc client.Client, profileBinding *profi
 		}
 		if err = removeHRFomManifestWork(ctx, kc, &mw, featureList); err != nil {
 			return err
+		}
+	}
+	return nil
+}
+
+// Uses the same rules as updateHelmReleaseDependency: each requirement it turns into a dependsOn must be installed as well,
+// otherwise the HelmRelease waits on one that never exists (e.g. cert-manager on akp-crd-manager for profiles older than it).
+func addRequiredFeatures(ctx context.Context, kc, fakeClient client.Client, clusterName string, featureInfo map[string][]string) error {
+	logger := klog.FromContext(ctx)
+	present := make(map[string]bool)
+	var queue []string
+	for _, features := range featureInfo {
+		for _, f := range features {
+			present[f] = true
+			queue = append(queue, f)
+		}
+	}
+
+	var claim *kmapi.ClusterClaimFeatures
+	for len(queue) > 0 {
+		name := queue[0]
+		queue = queue[1:]
+
+		var feature uiapi.Feature
+		if err := fakeClient.Get(ctx, client.ObjectKey{Name: name}, &feature); err != nil {
+			if errors.IsNotFound(err) {
+				continue
+			}
+			return err
+		}
+		if feature.Spec.FeatureSet == "opscenter-core" || len(feature.Spec.Requirements.Features) == 0 {
+			continue
+		}
+
+		if claim == nil {
+			var mc v1.ManagedCluster
+			if err := kc.Get(ctx, client.ObjectKey{Name: clusterName}, &mc); err != nil {
+				return err
+			}
+			var err error
+			if claim, err = getFeatureStatus(&mc); err != nil {
+				return err
+			}
+		}
+
+		for _, req := range feature.Spec.Requirements.Features {
+			if present[req] || req == hub.ChartLicenseProxyServer ||
+				slices.Contains(claim.DisabledFeatures, req) || slices.Contains(claim.ExternallyManagedFeatures, req) {
+				continue
+			}
+			var reqFeature uiapi.Feature
+			if err := fakeClient.Get(ctx, client.ObjectKey{Name: req}, &reqFeature); err != nil {
+				return err
+			}
+			present[req] = true
+			queue = append(queue, req)
+			featureInfo[reqFeature.Spec.FeatureSet] = append(featureInfo[reqFeature.Spec.FeatureSet], req)
+			logger.Info("Adding feature missing from the profile", "feature", req, "requiredBy", name, "featureSet", reqFeature.Spec.FeatureSet)
 		}
 	}
 	return nil
