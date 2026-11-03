@@ -177,7 +177,10 @@ func addRequiredFeatures(ctx context.Context, kc, fakeClient client.Client, clus
 				return err
 			}
 			var err error
-			if claim, err = getFeatureStatus(&mc); err != nil {
+			if claim, err = getFeatureStatus(&mc); pkgerr.Is(err, errFeaturesClaimNotFound) {
+				// claim comes from kube-ui-server, installed by opscenter-core
+				claim = &kmapi.ClusterClaimFeatures{}
+			} else if err != nil {
 				return err
 			}
 		}
