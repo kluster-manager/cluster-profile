@@ -391,6 +391,8 @@ func sanitizeFeatures(kc client.Client, clusterName string, features []string) (
 	return sanitizedFeatures, nil
 }
 
+var errFeaturesClaimNotFound = pkgerr.New("features cluster claim not found")
+
 func getFeatureStatus(cluster *v1.ManagedCluster) (*kmapi.ClusterClaimFeatures, error) {
 	var mp kmapi.ClusterClaimFeatures
 	for _, claim := range cluster.Status.ClusterClaims {
@@ -403,7 +405,7 @@ func getFeatureStatus(cluster *v1.ManagedCluster) (*kmapi.ClusterClaimFeatures, 
 		}
 	}
 
-	return nil, pkgerr.New("features cluster claim not found")
+	return nil, errFeaturesClaimNotFound
 }
 
 func existInManifestWork(kc client.Client, clusterName, fSetName, featureName string) (bool, error) {
