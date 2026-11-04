@@ -33,7 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func CreateHelmRelease(featureName, featureSetName, ns string, profile *profilev1alpha1.ManagedClusterSetProfile, featureObj uiapi.Feature, fakeServer *FakeServer, values map[string]any, dependsOn ...string) error {
+func CreateHelmRelease(featureName, featureSetName, ns string, profile *profilev1alpha1.ManagedClusterSetProfile, profileBinding *profilev1alpha1.ManagedClusterProfileBinding, featureObj uiapi.Feature, fakeServer *FakeServer, values map[string]any, dependsOn ...string) error {
 	hr := &fluxhelm.HelmRelease{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      featureName,
@@ -81,18 +81,7 @@ func CreateHelmRelease(featureName, featureSetName, ns string, profile *profilev
 		hr.Spec.DependsOn = append(hr.Spec.DependsOn, fluxhelm.DependencyReference{Name: d})
 	}
 
-	if len(profile.Spec.Features[featureName].ValuesFrom) > 0 {
-		valuesFrom := make([]fluxhelm.ValuesReference, 0, len(profile.Spec.Features[featureName].ValuesFrom))
-		for _, vf := range profile.Spec.Features[featureName].ValuesFrom {
-			valuesFrom = append(valuesFrom, fluxhelm.ValuesReference{
-				Kind:      vf.Kind,
-				Name:      vf.Name,
-				Optional:  vf.Optional,
-				ValuesKey: vf.ValuesKey,
-			})
-		}
-		hr.Spec.ValuesFrom = valuesFrom
-	}
+	hr.Spec.ValuesFrom = FeatureValuesFrom(featureName, profile, profileBinding)
 	if values != nil {
 		// Convert map to JSON
 		jsonData, err := json.Marshal(values)
@@ -117,4 +106,28 @@ func CreateHelmRelease(featureName, featureSetName, ns string, profile *profilev
 		return err
 	}
 	return nil
+}
+
+// FeatureValuesFrom returns the binding's valuesFrom for the feature when it has one, the same way binding values
+// replace the profile's, and the profile's otherwise.
+func FeatureValuesFrom(featureName string, profile *profilev1alpha1.ManagedClusterSetProfile, profileBinding *profilev1alpha1.ManagedClusterProfileBinding) []fluxhelm.ValuesReference {
+	refs := profile.Spec.Features[featureName].ValuesFrom
+	if profileBinding != nil {
+		if spec, found := profileBinding.Spec.Features[featureName]; found && len(spec.ValuesFrom) > 0 {
+			refs = spec.ValuesFrom
+		}
+	}
+	if len(refs) == 0 {
+		return nil
+	}
+	valuesFrom := make([]fluxhelm.ValuesReference, 0, len(refs))
+	for _, vf := range refs {
+		valuesFrom = append(valuesFrom, fluxhelm.ValuesReference{
+			Kind:      vf.Kind,
+			Name:      vf.Name,
+			Optional:  vf.Optional,
+			ValuesKey: vf.ValuesKey,
+		})
+	}
+	return valuesFrom
 }

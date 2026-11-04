@@ -269,7 +269,7 @@ func enableFeatureSet(ctx context.Context, kc client.Client, fakeServer *FakeSer
 		if slices.Contains(features, akpCrdManagerFeatureName) {
 			dependsOn = append(dependsOn, akpCrdManagerFeatureName)
 		}
-		if err = CreateHelmRelease("opscenter-features", "opscenter-core", hub.BootstrapHelmRepositoryNamespace(), profile, featureObj, fakeServer, mergedValues, dependsOn...); err != nil {
+		if err = CreateHelmRelease("opscenter-features", "opscenter-core", hub.BootstrapHelmRepositoryNamespace(), profile, profileBinding, featureObj, fakeServer, mergedValues, dependsOn...); err != nil {
 			return err
 		}
 
