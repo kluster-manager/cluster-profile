@@ -242,6 +242,8 @@ func applyUpgrade(ctx context.Context, kc client.Client, profileBinding *profile
 			}
 
 			hr.Spec.Chart.Spec.Version = profileBinding.Spec.OpscenterFeaturesVersion
+			// The copied HelmRelease keeps the valuesFrom of the last install render, which may predate the binding's.
+			hr.Spec.ValuesFrom = feature_installer.FeatureValuesFrom(hub.ChartOpscenterFeatures, profile, profileBinding)
 			if mergedValues != nil {
 				jsonData, err := json.Marshal(mergedValues)
 				if err != nil {
